@@ -11,7 +11,7 @@
 set -euo pipefail
 
 VERSION="${1:?usage: $0 <version tag, e.g. v0.2.0>}"
-REPO="${TAKO_GITHUB_REPO:-alex09x/tako}"
+REPO="${TAKO_GITHUB_REPO:-alex09x/tako-core}"
 cd "$(dirname "$0")/.."
 
 ./scripts/build-xcframework.sh
