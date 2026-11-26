@@ -1,0 +1,7 @@
+tako-session implements the session runtime protocol of zmx, version 0.8.1
+(https://github.com/neurosnap/zmx), with Tako's protocol extensions. Its aim
+is the same command line, socket layout and wire protocol; this version
+provides the wire protocol.
+
+zmx is Copyright (c) 2025 Eric Bower and is distributed under the MIT
+License; its full text is in LICENSE-zmx.

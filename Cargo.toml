@@ -1,6 +1,6 @@
 # The engine is the root package; the session helper joins as a member.
 [workspace]
-members = ["."]
+members = [".", "tako-session"]
 exclude = ["fuzz"]
 
 [package]

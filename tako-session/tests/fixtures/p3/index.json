@@ -1,0 +1,185 @@
+{
+ "binary_version": "zmx\t\t0.8.1",
+ "scenarios": {
+  "attach-if-label": {
+   "c2s": [
+    {
+     "len": 27,
+     "offset": 0,
+     "tag": 23
+    },
+    {
+     "len": 0,
+     "offset": 35,
+     "tag": 14
+    },
+    {
+     "len": 8,
+     "offset": 43,
+     "tag": 7
+    },
+    {
+     "len": 4,
+     "offset": 59,
+     "tag": 7
+    },
+    {
+     "len": 8,
+     "offset": 71,
+     "tag": 2
+    },
+    {
+     "len": 4,
+     "offset": 87,
+     "tag": 2
+    },
+    {
+     "len": 15,
+     "offset": 99,
+     "tag": 0
+    }
+   ],
+   "s2c": [
+    {
+     "len": 1,
+     "offset": 0,
+     "tag": 24
+    },
+    {
+     "len": 27,
+     "offset": 9,
+     "tag": 17
+    },
+    {
+     "len": 0,
+     "offset": 44,
+     "tag": 2
+    },
+    {
+     "len": 6,
+     "offset": 52,
+     "tag": 1
+    },
+    {
+     "len": 2,
+     "offset": 66,
+     "tag": 1
+    },
+    {
+     "len": 2,
+     "offset": 76,
+     "tag": 1
+    },
+    {
+     "len": 3,
+     "offset": 86,
+     "tag": 1
+    },
+    {
+     "len": 3,
+     "offset": 97,
+     "tag": 1
+    },
+    {
+     "len": 2,
+     "offset": 108,
+     "tag": 1
+    },
+    {
+     "len": 2,
+     "offset": 118,
+     "tag": 1
+    },
+    {
+     "len": 2,
+     "offset": 128,
+     "tag": 1
+    },
+    {
+     "len": 5,
+     "offset": 138,
+     "tag": 1
+    },
+    {
+     "len": 2,
+     "offset": 151,
+     "tag": 1
+    }
+   ]
+  },
+  "get": {
+   "c2s": [
+    {
+     "len": 0,
+     "offset": 0,
+     "tag": 14
+    }
+   ],
+   "s2c": [
+    {
+     "len": 11,
+     "offset": 0,
+     "tag": 17
+    }
+   ]
+  },
+  "kill-if-label-match": {
+   "c2s": [
+    {
+     "len": 11,
+     "offset": 0,
+     "tag": 22
+    }
+   ],
+   "s2c": [
+    {
+     "len": 1,
+     "offset": 0,
+     "tag": 24
+    }
+   ]
+  },
+  "kill-if-label-mismatch": {
+   "c2s": [
+    {
+     "len": 13,
+     "offset": 0,
+     "tag": 22
+    }
+   ],
+   "s2c": [
+    {
+     "len": 1,
+     "offset": 0,
+     "tag": 24
+    }
+   ]
+  },
+  "list": {
+   "c2s": [
+    {
+     "len": 0,
+     "offset": 0,
+     "tag": 6
+    },
+    {
+     "len": 0,
+     "offset": 8,
+     "tag": 14
+    }
+   ],
+   "s2c": [
+    {
+     "len": 552,
+     "offset": 0,
+     "tag": 6
+    },
+    {
+     "len": 11,
+     "offset": 560,
+     "tag": 17
+    }
+   ]
+  }
+ }
+}
