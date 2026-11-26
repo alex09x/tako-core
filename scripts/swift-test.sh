@@ -28,5 +28,9 @@ fi
 # SwiftPM's synthetic all-products test bundle does not pick up the binary
 # target's library on every toolchain; passing it to the linker directly
 # makes every link step see the same engine.
+#
+# Serially: several tests share process-wide state (the log level, the
+# pasteboard, WindowServer), and Swift Testing's parallel scheduling lets one
+# test's setting leak into another's assertions.
 export TAKOCORE_LOCAL_XCFRAMEWORK=1
-exec swift test -Xlinker -Ltarget/macos -Xlinker -ltako_core "$@"
+exec swift test --no-parallel -Xlinker -Ltarget/macos -Xlinker -ltako_core "$@"

@@ -8,6 +8,18 @@ The recorded PTY sessions under `tests/fixtures/ref/` come from
 (Apache License 2.0, © The Alacritty Project). Only the recordings and their
 geometry are used, as test input; the expected screens beside them are ours.
 
+Two fonts under `swift/Resources/fonts/` are test fixtures for the TakoCoreUI
+font tests; neither is built into the library:
+
+- `JetBrainsMonoNerdFont-Regular.ttf` is © The JetBrains Mono Project Authors,
+  patched by [Nerd Fonts](https://www.nerdfonts.com), under the SIL Open Font
+  License 1.1 (`swift/Resources/fonts/OFL.txt`).
+- `FiraCode-VF.ttf` (Fira Code 6.2) is © 2014 The Fira Code Project Authors
+  (https://github.com/tonsky/FiraCode), under the SIL Open Font License 1.1
+  (`swift/Resources/fonts/FiraCode-OFL.txt`). It is the unmodified
+  `variable_ttf/FiraCode-VF.ttf` from the `6.2` release, SHA-256
+  `04149681350f161aca538858b88d17443c586cacca83c165939a13423fe91a26`.
+
 The cases in `tests/expected_screens.rs` and `tests/cluster_edges.rs` are
 adapted from the test suite of [x/vt](https://github.com/charmbracelet/x/tree/main/vt),
 a terminal emulator library. Where this terminal deliberately behaves as xterm
