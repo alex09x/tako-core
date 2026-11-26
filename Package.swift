@@ -30,14 +30,19 @@ let package = Package(
         .library(name: "TakoCoreUI", targets: ["TakoCoreUI"]),
     ],
     targets: [
-        .binaryTarget(
-            name: "TakoCoreXCFramework",
-            // The Rust engine for macOS arm64, iOS device and iOS Simulator,
-            // published as a release asset rather than committed. Both values
-            // are rewritten by scripts/package-xcframework.sh.
-            url: "https://github.com/alex09x/tako/releases/download/v0.2.1/TakoCore.xcframework.zip",
-            checksum: "ab86531fb5708f1f4a228aa060edb8d44f02cd36550402f8174ca6c86e92e1eb"
-        ),
+        // This repository's own tests set TAKOCORE_LOCAL_XCFRAMEWORK=1 and link
+        // the framework scripts/build-xcframework.sh just built from these
+        // sources (scripts/swift-test.sh); consumers get the release asset.
+        Context.environment["TAKOCORE_LOCAL_XCFRAMEWORK"] == "1"
+            ? .binaryTarget(name: "TakoCoreXCFramework", path: "TakoCore.xcframework")
+            : .binaryTarget(
+                name: "TakoCoreXCFramework",
+                // The Rust engine for macOS arm64, iOS device and iOS Simulator,
+                // published as a release asset rather than committed. Both values
+                // are rewritten by scripts/package-xcframework.sh.
+                url: "https://github.com/alex09x/tako/releases/download/v0.2.1/TakoCore.xcframework.zip",
+                checksum: "ab86531fb5708f1f4a228aa060edb8d44f02cd36550402f8174ca6c86e92e1eb"
+            ),
         .target(
             name: "TakoCoreUI",
             dependencies: ["TakoCoreXCFramework"],

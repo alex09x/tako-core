@@ -1,10 +1,15 @@
+# The engine is the root package; the session helper joins as a member.
+[workspace]
+members = ["."]
+exclude = ["fuzz"]
+
 [package]
 name = "tako-core"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
 description = "A VT terminal engine: parser, screen and scrollback, input encoding, kitty keyboard and graphics, with Swift bindings"
-repository = "https://github.com/alex09x/tako"
+repository = "https://github.com/alex09x/tako-core"
 rust-version = "1.88"
 
 # The fuzz crate is a separate workspace (needs nightly).

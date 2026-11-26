@@ -1,0 +1,128 @@
+# tako-core — CI
+# Copyright (c) 2026 Alexander Panasenko
+# Contact: alex@prod.codes
+# Author: https://prod.codes/about/
+# Project: https://github.com/alex09x/tako-core
+# SPDX-License-Identifier: MIT
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: never
+  HOMEBREW_NO_AUTO_UPDATE: "1"
+  MITTS_NO_SOURCE_FALLBACK: "1"
+
+jobs:
+  lint:
+    name: fmt and clippy (macOS arm64)
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Bootstrap Mitts
+        run: |
+          set -euo pipefail
+          curl -fsSL https://mittsbuild.com/install.sh -o "$RUNNER_TEMP/mitts-install.sh"
+          sh -n "$RUNNER_TEMP/mitts-install.sh"
+          env -u MITTS_VERSION MITTS_INSTALL_ROOT="$HOME/.local" sh "$RUNNER_TEMP/mitts-install.sh"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: rustfmt
+        run: cargo fmt --all --check
+      - name: clippy
+        run: mitts clippy --locked --workspace --all-targets --features pty,ssh -- -D warnings
+
+  engine-macos:
+    name: engine tests (macOS arm64)
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Bootstrap Mitts
+        run: |
+          set -euo pipefail
+          curl -fsSL https://mittsbuild.com/install.sh -o "$RUNNER_TEMP/mitts-install.sh"
+          sh -n "$RUNNER_TEMP/mitts-install.sh"
+          env -u MITTS_VERSION MITTS_INSTALL_ROOT="$HOME/.local" sh "$RUNNER_TEMP/mitts-install.sh"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Test
+        run: mitts test --locked --workspace --no-fail-fast --features pty,ssh
+
+  engine-linux:
+    name: engine tests (Linux x86_64)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Test
+        run: cargo test --locked --workspace --no-fail-fast --features pty,ssh
+
+  swift-macos:
+    name: TakoCoreUI tests (macOS arm64)
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Bootstrap Mitts
+        run: |
+          set -euo pipefail
+          curl -fsSL https://mittsbuild.com/install.sh -o "$RUNNER_TEMP/mitts-install.sh"
+          sh -n "$RUNNER_TEMP/mitts-install.sh"
+          env -u MITTS_VERSION MITTS_INSTALL_ROOT="$HOME/.local" sh "$RUNNER_TEMP/mitts-install.sh"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Prepare the Metal compiler
+        run: |
+          set -euo pipefail
+          if ! xcrun --sdk macosx metal -v >/dev/null 2>&1; then
+            xcodebuild -downloadComponent MetalToolchain
+          fi
+      - name: Test
+        run: scripts/swift-test.sh
+
+  ios-build:
+    name: TakoCoreUI build (iOS Simulator)
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Bootstrap Mitts
+        run: |
+          set -euo pipefail
+          curl -fsSL https://mittsbuild.com/install.sh -o "$RUNNER_TEMP/mitts-install.sh"
+          sh -n "$RUNNER_TEMP/mitts-install.sh"
+          env -u MITTS_VERSION MITTS_INSTALL_ROOT="$HOME/.local" sh "$RUNNER_TEMP/mitts-install.sh"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Prepare the Metal compiler
+        run: |
+          set -euo pipefail
+          if ! xcrun --sdk iphonesimulator metal -v >/dev/null 2>&1; then
+            xcodebuild -downloadComponent MetalToolchain
+          fi
+      - name: Build the xcframework
+        run: scripts/build-xcframework.sh
+      - name: Build the package for iOS Simulator
+        env:
+          TAKOCORE_LOCAL_XCFRAMEWORK: "1"
+        run: xcodebuild build -scheme TakoCoreUI -destination 'generic/platform=iOS Simulator' -quiet
