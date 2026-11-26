@@ -24,6 +24,8 @@ env:
   CARGO_TERM_COLOR: never
   HOMEBREW_NO_AUTO_UPDATE: "1"
   MITTS_NO_SOURCE_FALLBACK: "1"
+  # One Mitts release for every job; raise it on purpose, not by upstream drift.
+  MITTS_VERSION: "0.5.7"
 
 jobs:
   lint:
@@ -39,8 +41,9 @@ jobs:
           set -euo pipefail
           curl -fsSL https://mittsbuild.com/install.sh -o "$RUNNER_TEMP/mitts-install.sh"
           sh -n "$RUNNER_TEMP/mitts-install.sh"
-          env -u MITTS_VERSION MITTS_INSTALL_ROOT="$HOME/.local" sh "$RUNNER_TEMP/mitts-install.sh"
+          MITTS_INSTALL_ROOT="$HOME/.local" sh "$RUNNER_TEMP/mitts-install.sh"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          test "$("$HOME/.local/bin/mitts" --version | awk '{print $2}')" = "$MITTS_VERSION"
       - name: rustfmt
         run: cargo fmt --all --check
       - name: clippy
@@ -59,8 +62,9 @@ jobs:
           set -euo pipefail
           curl -fsSL https://mittsbuild.com/install.sh -o "$RUNNER_TEMP/mitts-install.sh"
           sh -n "$RUNNER_TEMP/mitts-install.sh"
-          env -u MITTS_VERSION MITTS_INSTALL_ROOT="$HOME/.local" sh "$RUNNER_TEMP/mitts-install.sh"
+          MITTS_INSTALL_ROOT="$HOME/.local" sh "$RUNNER_TEMP/mitts-install.sh"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          test "$("$HOME/.local/bin/mitts" --version | awk '{print $2}')" = "$MITTS_VERSION"
       - name: Test
         run: mitts test --locked --workspace --no-fail-fast --features pty,ssh
 
@@ -88,8 +92,9 @@ jobs:
           set -euo pipefail
           curl -fsSL https://mittsbuild.com/install.sh -o "$RUNNER_TEMP/mitts-install.sh"
           sh -n "$RUNNER_TEMP/mitts-install.sh"
-          env -u MITTS_VERSION MITTS_INSTALL_ROOT="$HOME/.local" sh "$RUNNER_TEMP/mitts-install.sh"
+          MITTS_INSTALL_ROOT="$HOME/.local" sh "$RUNNER_TEMP/mitts-install.sh"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          test "$("$HOME/.local/bin/mitts" --version | awk '{print $2}')" = "$MITTS_VERSION"
       - name: Prepare the Metal compiler
         run: |
           set -euo pipefail
@@ -112,8 +117,9 @@ jobs:
           set -euo pipefail
           curl -fsSL https://mittsbuild.com/install.sh -o "$RUNNER_TEMP/mitts-install.sh"
           sh -n "$RUNNER_TEMP/mitts-install.sh"
-          env -u MITTS_VERSION MITTS_INSTALL_ROOT="$HOME/.local" sh "$RUNNER_TEMP/mitts-install.sh"
+          MITTS_INSTALL_ROOT="$HOME/.local" sh "$RUNNER_TEMP/mitts-install.sh"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          test "$("$HOME/.local/bin/mitts" --version | awk '{print $2}')" = "$MITTS_VERSION"
       - name: Prepare the Metal compiler
         run: |
           set -euo pipefail
@@ -125,4 +131,4 @@ jobs:
       - name: Build the package for iOS Simulator
         env:
           TAKOCORE_LOCAL_XCFRAMEWORK: "1"
-        run: xcodebuild build -scheme TakoCoreUI -destination 'generic/platform=iOS Simulator' -quiet
+        run: xcodebuild build -scheme TakoCoreUI -destination 'generic/platform=iOS Simulator' ARCHS=arm64 -quiet
