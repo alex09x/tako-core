@@ -35,10 +35,12 @@ tako-core = { git = "https://github.com/alex09x/tako-core", tag = "core-v0.2.0" 
 
 ## Develop
 
+Builds and tests go through [Mitts](https://mittsbuild.com), not cargo.
+
 | What | Command |
 | --- | --- |
-| Engine tests | `mitts test --features pty,ssh` (or `cargo test --features pty,ssh`) |
-| Lints | `cargo fmt --all --check`, `mitts clippy --all-targets --features pty,ssh -- -D warnings` |
+| Engine tests | `mitts test --features pty,ssh` |
+| Lints | `mitts fmt --all --check`, `mitts clippy --all-targets --features pty,ssh -- -D warnings` |
 | TakoCoreUI tests on macOS | `scripts/swift-test.sh` |
 | The xcframework | `scripts/build-xcframework.sh` (`--macos-only` for the host slice) |
 | A release | `scripts/package-xcframework.sh core-vX.Y.Z`, then attach `target/TakoCore.xcframework.zip` to the release |

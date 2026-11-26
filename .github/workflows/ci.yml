@@ -45,7 +45,7 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           test "$("$HOME/.local/bin/mitts" --version | awk '{print $2}')" = "$MITTS_VERSION"
       - name: rustfmt
-        run: cargo fmt --all --check
+        run: mitts fmt --all --check
       - name: clippy
         run: mitts clippy --locked --workspace --all-targets --features pty,ssh -- -D warnings
 
@@ -76,8 +76,16 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
+      - name: Bootstrap Mitts
+        run: |
+          set -euo pipefail
+          curl -fsSL https://mittsbuild.com/install.sh -o "$RUNNER_TEMP/mitts-install.sh"
+          sh -n "$RUNNER_TEMP/mitts-install.sh"
+          MITTS_INSTALL_ROOT="$HOME/.local" sh "$RUNNER_TEMP/mitts-install.sh"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          test "$("$HOME/.local/bin/mitts" --version | awk '{print $2}')" = "$MITTS_VERSION"
       - name: Test
-        run: cargo test --locked --workspace --no-fail-fast --features pty,ssh
+        run: mitts test --locked --workspace --no-fail-fast --features pty,ssh
 
   swift-macos:
     name: TakoCoreUI tests (macOS arm64)
