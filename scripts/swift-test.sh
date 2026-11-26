@@ -17,8 +17,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# An --ios-only build restamps the framework without a macOS slice, so the
+# slice itself is checked too.
 if ! python3 scripts/engine_fingerprint.py check TakoCore.xcframework \
-   || ! python3 scripts/engine_fingerprint.py check target/macos/libtako_core.a; then
+   || ! python3 scripts/engine_fingerprint.py check target/macos/libtako_core.a \
+   || [ ! -f TakoCore.xcframework/macos-arm64/libtako_core.a ]; then
     ./scripts/build-xcframework.sh --macos-only
 fi
 

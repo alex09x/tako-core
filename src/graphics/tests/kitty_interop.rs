@@ -14,7 +14,7 @@ use crate::terminal::Terminal;
 
 #[test]
 fn kitty_interop_icat_stream_defaults_to_direct_and_is_quiet() {
-    let image = include_bytes!("../../../brand/out/TakoCore.iconset/icon_128x128.png");
+    let image = include_bytes!("../../../tests/fixtures/kitty/icon_128x128.png");
     let mut term = Terminal::new(80, 24);
     // The control keys come from `kitten icat --transfer-mode=stream`.
     let command = format!("\x1b_Ga=T,q=2,f=100,s=128,v=128,X=1;{}\x1b\\", b64(image));
