@@ -95,7 +95,7 @@ public final class MetalTerminalRenderer {
 
     var atlasTexturesForTesting: [MTLTexture?] { atlasTextures }
     var nextDrawableProvider: (CAMetalLayer) -> CAMetalDrawable? = { $0.nextDrawable() }
-    var committedFrameCaptureForTesting: ((FfiRenderFrame, [UInt8]) -> Void)?
+    public var committedFrameCaptureForTesting: ((FfiRenderFrame, [UInt8]) -> Void)?
 
     public internal(set) var customShaders: [TerminalCustomShader] = []
     public internal(set) var customShaderErrors: [String] = []

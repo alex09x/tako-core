@@ -40,8 +40,8 @@ let package = Package(
                 // The Rust engine for macOS arm64, iOS device and iOS Simulator,
                 // published as a release asset rather than committed. Both values
                 // are rewritten by scripts/package-xcframework.sh.
-                url: "https://github.com/alex09x/tako-core/releases/download/v0.1.1/TakoCore.xcframework.zip",
-                checksum: "d716670d63a54e1760d89825d4bd987fa6465bff221960e757e0967cdff9904c"
+                url: "https://github.com/alex09x/tako-core/releases/download/v0.1.2/TakoCore.xcframework.zip",
+                checksum: "f43fd591bbc562f95d2722754e1b6d96151dc351214e952702e259057638f6ec"
             ),
         .target(
             name: "TakoCoreUI",

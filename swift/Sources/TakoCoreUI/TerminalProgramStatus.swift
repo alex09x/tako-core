@@ -236,7 +236,7 @@ public struct TerminalProgramStatusUpdate: Sendable, Equatable, Hashable {
         self.effective = effective
     }
 
-    init(ffi: FfiProgramStatusUpdate) {
+    public init(ffi: FfiProgramStatusUpdate) {
         self.revision = ffi.revision
         self.mutations = ffi.mutations.map(TerminalProgramStatusMutation.init(ffi:))
         self.effective = ffi.effective.map(TerminalProgramStatusRecord.init(ffi:))
@@ -262,7 +262,7 @@ public struct TerminalProgramStatusSnapshot: Sendable, Equatable, Hashable {
         self.records = records
     }
 
-    init(ffi: FfiProgramStatusSnapshot) {
+    public init(ffi: FfiProgramStatusSnapshot) {
         self.revision = ffi.revision
         self.osc7501Active = ffi.osc7501Active
         self.effective = ffi.effective.map(TerminalProgramStatusRecord.init(ffi:))
