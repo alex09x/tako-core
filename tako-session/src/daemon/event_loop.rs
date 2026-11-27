@@ -304,6 +304,18 @@ impl Daemon {
             }
             Ok(_) => {}
             Err(e) if e.kind() == io::ErrorKind::WouldBlock => {}
+            // The client hung up, maybe right after a request (`attach`
+            // inside a session sends Switch and exits): what it sent is
+            // still to be read. Nothing more goes out; the read closes it.
+            Err(e)
+                if matches!(
+                    e.kind(),
+                    io::ErrorKind::BrokenPipe | io::ErrorKind::ConnectionReset
+                ) =>
+            {
+                c.write_buf.clear();
+                c.write_closed = true;
+            }
             Err(_) => {
                 self.close_client(i, false);
                 return true;

@@ -22,6 +22,9 @@ pub struct Client {
     pub has_pending_output: bool,
     /// Some bytes of `write_buf` already went out (a partial flush).
     pub has_flushed_bytes: bool,
+    /// A write found the client gone: nothing more is queued for it, and
+    /// what it sent is still read until EOF.
+    pub write_closed: bool,
     /// Sent `Init`: a real attached terminal, not run/send/tail.
     pub is_terminal: bool,
     /// The tracked environment the client sent (`EnvSet`).
@@ -36,6 +39,7 @@ impl Client {
             read_buf: FrameBuffer::new(),
             has_pending_output: false,
             has_flushed_bytes: false,
+            write_closed: false,
             is_terminal: false,
             env_str: None,
         }

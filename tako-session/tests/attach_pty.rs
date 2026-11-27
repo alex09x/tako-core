@@ -100,9 +100,15 @@ fn attach_inside_a_session_switches_the_client_without_leaking() {
         client.write(format!("{bin} attach {next}\r").as_bytes());
         // Leaving a session resets the terminal (RIS): the switch happened.
         client.wait_for("\x1bc");
-        std::thread::sleep(Duration::from_millis(300));
-        client.write(b"echo in-$ZMX_SESSION-now\r");
-        client.wait_for(&format!("in-{next}-now"));
+        // A marker no replayed screen can hold yet, typed until the shell
+        // of the new session answers: input typed while the client is
+        // still between sessions is discarded with raw mode.
+        let marker = format!("in-{next}-r{round}");
+        client.type_until(
+            format!("echo in-$ZMX_SESSION-r{round}\r").as_bytes(),
+            &marker,
+            Duration::from_secs(20),
+        );
         if round == 0 {
             fds_after_first = open_fds(client.child.id());
         }
@@ -112,8 +118,19 @@ fn attach_inside_a_session_switches_the_client_without_leaking() {
         fds <= fds_after_first + 1,
         "client fds grew from {fds_after_first} to {fds}"
     );
-    client.write(b"\x1c");
-    assert_eq!(client.exit_within(Duration::from_secs(5)), Some(0));
+    // ctrl+\ alone in a read detaches; resent if it shared a read with
+    // other input, or was typed during a terminal mode change.
+    let start = std::time::Instant::now();
+    let status = loop {
+        client.write(b"\x1c");
+        if let Some(status) = client.exit_within(Duration::from_secs(1)) {
+            break Some(status);
+        }
+        if start.elapsed() > Duration::from_secs(20) {
+            break None;
+        }
+    };
+    assert_eq!(status, Some(0));
 }
 
 #[test]
@@ -125,8 +142,10 @@ fn the_app_going_away_leaves_the_session_running() {
         &[("ZMX_NO_DETACH_KEY", "1")],
     );
     client.wait_for("session \"p2\" created");
-    client.write(b"echo up\r");
-    client.wait_for("up");
+    // The answer, not the echo of the typed line: the shell runs (and
+    // ignores SIGQUIT) before ctrl+\ is typed.
+    client.write(b"echo up-$((1+1))\r");
+    client.wait_for("up-2");
     // With the detach key off, ctrl+\ goes to the program.
     client.write(b"\x1c");
     assert_eq!(

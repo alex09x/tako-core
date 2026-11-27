@@ -34,14 +34,34 @@ fn bad_clients_are_dropped_and_the_session_carries_on() {
     let mut header = vec![Tag::INPUT.0];
     header.extend_from_slice(&(1u32 << 30).to_le_bytes());
     header.extend_from_slice(&[0, 0, 0]);
-    huge.write_all(&header).unwrap();
-    huge.write_all(&[b'x'; 4096]).unwrap();
-    let mut buf = [0u8; 64];
-    let closed = match huge.read(&mut buf) {
-        Ok(0) => true,
-        Err(e) => e.kind() == std::io::ErrorKind::ConnectionReset,
-        Ok(_) => false,
+    // The daemon may hang up as soon as the header is in: a write that then
+    // finds the socket closed is the drop itself, not a test failure.
+    let gone = |e: &std::io::Error| {
+        matches!(
+            e.kind(),
+            std::io::ErrorKind::BrokenPipe | std::io::ErrorKind::ConnectionReset
+        )
     };
+    let mut closed = false;
+    for chunk in [&header[..], &[b'x'; 4096][..]] {
+        match huge.write_all(chunk) {
+            Ok(()) => {}
+            Err(e) if gone(&e) => {
+                closed = true;
+                break;
+            }
+            Err(e) => panic!("write: {e}"),
+        }
+    }
+    if !closed {
+        // Kept open, the read would time out after 5 s: not closed.
+        let mut buf = [0u8; 64];
+        closed = match huge.read(&mut buf) {
+            Ok(0) => true,
+            Err(e) => gone(&e),
+            Ok(_) => false,
+        };
+    }
     assert!(closed, "the daemon kept the connection");
     // A screen of zero or 65535 x 65535 cells is ignored.
     let mut p = Peer::connect(&dir.socket("b1"));
@@ -49,6 +69,48 @@ fn bad_clients_are_dropped_and_the_session_carries_on() {
     p.send(Tag::RESIZE, &[0xff; 8]);
     p.send(Tag::INPUT, b"echo alive-$((3+4))\r");
     p.wait_output("alive-7");
+}
+
+#[test]
+fn a_request_sent_just_before_hanging_up_is_not_lost() {
+    use std::io::Write;
+    use tako_session::ipc::encode_frame;
+    let dir = Dir::new("hangup");
+    dir.create("h1");
+    let mut leader = Peer::connect(&dir.socket("h1"));
+    leader.init(24, 80);
+    leader.expect(Tag::RESIZE);
+    let ppid = std::process::Command::new("ps")
+        .args(["-o", "ppid=", "-p", &info(&dir, "h1").pid.to_string()])
+        .output()
+        .unwrap();
+    let daemon: i32 = String::from_utf8_lossy(&ppid.stdout)
+        .trim()
+        .parse()
+        .unwrap();
+    // `attach` inside a session writes Switch and exits at once. The daemon
+    // takes the connection in the same round as program output, which it
+    // then fails to send there: the request must still be read.
+    for round in 0..3 {
+        leader.send(
+            Tag::INPUT,
+            format!("sleep 0.2; printf out-{round}\r").as_bytes(),
+        );
+        leader.wait_output(&format!("printf out-{round}"));
+        // SAFETY: stopping and resuming the session's own daemon.
+        unsafe { libc::kill(daemon, libc::SIGSTOP) };
+        let name = format!("next-{round}");
+        let mut request = std::os::unix::net::UnixStream::connect(dir.socket("h1")).unwrap();
+        request
+            .write_all(&encode_frame(Tag::SWITCH, name.as_bytes()))
+            .unwrap();
+        drop(request);
+        std::thread::sleep(Duration::from_millis(500));
+        // SAFETY: as above.
+        unsafe { libc::kill(daemon, libc::SIGCONT) };
+        let payload = String::from_utf8(leader.expect(Tag::SWITCH)).unwrap();
+        assert_eq!(payload.split('\n').next(), Some(name.as_str()), "{payload}");
+    }
 }
 
 #[test]

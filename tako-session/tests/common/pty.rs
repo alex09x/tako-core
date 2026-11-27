@@ -126,6 +126,36 @@ impl PtyClient {
         }
     }
 
+    /// Whether `needle` shows up within `limit`.
+    pub fn seen_within(&mut self, needle: &str, limit: Duration) -> bool {
+        let start = Instant::now();
+        while start.elapsed() < limit {
+            self.pump();
+            if self.text().contains(needle) {
+                return true;
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        false
+    }
+
+    /// Types `input` until `needle` shows up, for input typed while the
+    /// client may still be between sessions (leaving raw mode discards
+    /// unread input). Fails after `limit`.
+    pub fn type_until(&mut self, input: &[u8], needle: &str, limit: Duration) {
+        let start = Instant::now();
+        while start.elapsed() < limit {
+            self.write(input);
+            if self.seen_within(needle, Duration::from_millis(500)) {
+                return;
+            }
+        }
+        panic!(
+            "no {needle:?} after typing for {limit:?}: {:?}",
+            self.text()
+        );
+    }
+
     pub fn resize(&self, rows: u16, cols: u16) {
         let ws = winsize(rows, cols);
         // SAFETY: setting the size of our PTY; the kernel signals the group.

@@ -93,6 +93,15 @@ impl Dir {
 
 impl Drop for Dir {
     fn drop(&mut self) {
+        // A failed test shows what the daemons and clients logged.
+        if std::thread::panicking()
+            && let Ok(logs) = std::fs::read_dir(self.path.join("logs"))
+        {
+            for log in logs.flatten() {
+                let text = std::fs::read_to_string(log.path()).unwrap_or_default();
+                eprintln!("--- {}\n{text}", log.path().display());
+            }
+        }
         if let Ok(entries) = std::fs::read_dir(&self.path) {
             for e in entries.flatten() {
                 if let Ok(mut s) = UnixStream::connect(e.path()) {

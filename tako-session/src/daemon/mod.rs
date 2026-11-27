@@ -180,12 +180,15 @@ impl Daemon {
     /// Queues a frame for the client at `i`.
     pub fn send(&mut self, i: usize, tag: Tag, payload: &[u8]) {
         let c = &mut self.clients[i];
+        if c.write_closed {
+            return;
+        }
         append_frame(&mut c.write_buf, tag, payload);
         c.has_pending_output = true;
     }
 
     pub fn broadcast(&mut self, tag: Tag, payload: &[u8]) {
-        for c in &mut self.clients {
+        for c in self.clients.iter_mut().filter(|c| !c.write_closed) {
             append_frame(&mut c.write_buf, tag, payload);
             c.has_pending_output = true;
         }
