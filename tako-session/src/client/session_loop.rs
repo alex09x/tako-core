@@ -12,6 +12,7 @@
 //! window size changes as `Resize`, until detach, hang-up or a switch.
 
 use crate::ipc::{FrameBuffer, Tag, append_frame, append_size_frames};
+use crate::socket::hung_up as gone;
 use crate::{keys, log, signal, term};
 use std::io;
 
@@ -87,13 +88,6 @@ fn drain_frames(
         }
     }
     None
-}
-
-fn gone(e: &io::Error) -> bool {
-    matches!(
-        e.kind(),
-        io::ErrorKind::ConnectionReset | io::ErrorKind::BrokenPipe
-    )
 }
 
 /// Runs the attached client on `sock` with the frames already received in

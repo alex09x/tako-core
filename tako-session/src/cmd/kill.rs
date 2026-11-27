@@ -16,7 +16,7 @@ use super::list::session_entries;
 use crate::client::{Conn, ProbeError, await_guard_status};
 use crate::ipc::{GuardReply, Tag};
 use crate::log;
-use crate::socket::{SessionMatch, cleanup_stale_socket, session_exists, socket_path};
+use crate::socket::{SessionMatch, cleanup_stale_socket, hung_up, session_exists, socket_path};
 use std::io::{self, Read, Write};
 use std::path::Path;
 
@@ -94,9 +94,10 @@ pub fn kill_one(dir: &Path, name: &str, force: bool, io: &mut Io) -> Result<(), 
         }
     };
     if let Err(e) = conn.send(Tag::KILL, b"") {
-        return match e.kind() {
-            io::ErrorKind::BrokenPipe | io::ErrorKind::ConnectionReset => Ok(()),
-            _ => Err(KillError::Unexpected),
+        return if hung_up(&e) {
+            Ok(())
+        } else {
+            Err(KillError::Unexpected)
         };
     }
     drain(&mut conn);

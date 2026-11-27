@@ -14,7 +14,7 @@ use super::error::{CliError, CliResult, name_too_long};
 use crate::client::{Conn, ProbeError};
 use crate::ipc::Tag;
 use crate::log;
-use crate::socket::{cleanup_stale_socket, socket_path};
+use crate::socket::{cleanup_stale_socket, hung_up, socket_path};
 use std::path::Path;
 
 pub fn run(dir: &Path, session: &str) -> CliResult {
@@ -40,14 +40,7 @@ pub fn run(dir: &Path, session: &str) -> CliResult {
     };
     match conn.send(Tag::DETACH_ALL, b"") {
         Ok(()) => Ok(()),
-        Err(e)
-            if matches!(
-                e.kind(),
-                std::io::ErrorKind::BrokenPipe | std::io::ErrorKind::ConnectionReset
-            ) =>
-        {
-            Ok(())
-        }
+        Err(e) if hung_up(&e) => Ok(()),
         Err(_) => Err(CliError::Silent),
     }
 }

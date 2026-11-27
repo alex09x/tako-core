@@ -168,6 +168,16 @@ pub fn listen(path: &Path) -> io::Result<UnixListener> {
     Ok(listener)
 }
 
+/// Whether an I/O error on a session socket means the other side hung up.
+/// Linux reports a write to it as a broken pipe or a reset; macOS may
+/// report it as "not connected".
+pub fn hung_up(e: &io::Error) -> bool {
+    matches!(
+        e.kind(),
+        io::ErrorKind::BrokenPipe | io::ErrorKind::ConnectionReset | io::ErrorKind::NotConnected
+    )
+}
+
 use crate::log;
 
 #[cfg(test)]
@@ -251,5 +261,16 @@ mod tests {
         cleanup_stale_socket(&dir, "live");
         assert!(!session_exists(&dir, "live").unwrap());
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_hang_up_is_told_apart_from_other_errors() {
+        use io::ErrorKind::*;
+        for kind in [BrokenPipe, ConnectionReset, NotConnected] {
+            assert!(hung_up(&io::Error::from(kind)), "{kind:?}");
+        }
+        for kind in [WouldBlock, Interrupted, PermissionDenied, ConnectionRefused] {
+            assert!(!hung_up(&io::Error::from(kind)), "{kind:?}");
+        }
     }
 }

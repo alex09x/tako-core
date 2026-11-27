@@ -363,14 +363,7 @@ fn switch_session(cfg: &Cfg, current: &str, next: &str) -> CliResult {
     };
     match stream.write_all(&encode_frame(Tag::SWITCH, next.as_bytes())) {
         Ok(()) => Ok(()),
-        Err(e)
-            if matches!(
-                e.kind(),
-                io::ErrorKind::BrokenPipe | io::ErrorKind::ConnectionReset
-            ) =>
-        {
-            Ok(())
-        }
+        Err(e) if socket::hung_up(&e) => Ok(()),
         Err(_) => Err(CliError::Silent),
     }
 }

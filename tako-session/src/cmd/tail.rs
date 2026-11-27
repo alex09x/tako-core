@@ -59,14 +59,7 @@ pub fn follow(
             let n = match streams[i].read(&mut chunk) {
                 Ok(n) => n,
                 Err(e) if e.kind() == io::ErrorKind::WouldBlock => continue,
-                Err(e)
-                    if matches!(
-                        e.kind(),
-                        io::ErrorKind::ConnectionReset | io::ErrorKind::BrokenPipe
-                    ) =>
-                {
-                    return Ok(1);
-                }
+                Err(e) if socket::hung_up(&e) => return Ok(1),
                 Err(e) => {
                     log::error(&format!("daemon read err={e}"));
                     return Err(e);

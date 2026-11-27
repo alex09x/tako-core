@@ -63,14 +63,7 @@ pub fn send(dir: &Path, name: &str, path: &Path, words: &[String], tag: Tag) -> 
     let mut probe = probe_or_report(dir, name, path)?;
     match probe.conn.stream.write_all(&encode_frame(tag, &payload)) {
         Ok(()) => Ok(()),
-        Err(e)
-            if matches!(
-                e.kind(),
-                io::ErrorKind::BrokenPipe | io::ErrorKind::ConnectionReset
-            ) =>
-        {
-            Ok(())
-        }
+        Err(e) if socket::hung_up(&e) => Ok(()),
         Err(_) => Err(CliError::Silent),
     }
 }
@@ -91,14 +84,7 @@ pub fn write(
     let stream = &mut probe.conn.stream;
     match stream.write_all(&encode_frame(Tag::WRITE, &payload)) {
         Ok(()) => {}
-        Err(e)
-            if matches!(
-                e.kind(),
-                io::ErrorKind::BrokenPipe | io::ErrorKind::ConnectionReset
-            ) =>
-        {
-            return Ok(());
-        }
+        Err(e) if socket::hung_up(&e) => return Ok(()),
         Err(_) => return Err(CliError::Silent),
     }
     // The ACK may come in pieces or after other frames: wait for it whole.

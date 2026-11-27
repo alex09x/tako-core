@@ -70,9 +70,10 @@ pub fn run(opts: Options, detached: bool, words: &[String], out: &mut dyn Write)
     let size = term::terminal_size(1);
     let _ = stream.write_all(&encode_frame(Tag::RESIZE, &size.encode()));
     if let Err(e) = stream.write_all(&encode_frame(Tag::RUN, &cmd)) {
-        return match e.kind() {
-            std::io::ErrorKind::BrokenPipe | std::io::ErrorKind::ConnectionReset => Ok(()),
-            _ => Err(CliError::Silent),
+        return if socket::hung_up(&e) {
+            Ok(())
+        } else {
+            Err(CliError::Silent)
         };
     }
     let code = super::tail::follow(std::slice::from_mut(&mut stream), detached, true, out)
