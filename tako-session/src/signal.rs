@@ -60,6 +60,28 @@ pub fn open_pipe() -> std::io::Result<i32> {
     Ok(fds[0])
 }
 
+/// Closes the self-pipe; a handler that runs later finds no pipe and does
+/// nothing.
+pub fn close_pipe() {
+    for slot in [&PIPE_WRITE, &PIPE_READ] {
+        let fd = slot.swap(-1, Ordering::Relaxed);
+        if fd >= 0 {
+            // SAFETY: the descriptor was opened by `open_pipe` and is ours.
+            unsafe { libc::close(fd) };
+        }
+    }
+}
+
+/// Closes the self-pipe when the loop that opened it ends, so a client that
+/// switches sessions does not leave a pipe behind each time.
+pub struct PipeGuard;
+
+impl Drop for PipeGuard {
+    fn drop(&mut self) {
+        close_pipe();
+    }
+}
+
 /// The self-pipe's read end, or -1 before `open_pipe`.
 pub fn pipe_read_fd() -> i32 {
     PIPE_READ.load(Ordering::Relaxed)

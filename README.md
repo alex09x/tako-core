@@ -14,6 +14,7 @@ The terminal engine behind [Tako](https://github.com/alex09x/tako): a Rust VT co
   - an optional PTY runner (`features = ["pty"]`) and SSH client (`features = ["ssh"]`);
   - Swift bindings through UniFFI.
 - **`TakoCoreUI`** (Swift package at the root): `TakoTerminalNSView` for AppKit and `TakoTerminalView` for UIKit, drawn with Metal.
+- **`tako-session`** ([tako-session/](tako-session/README.md)): the session runtime. Shells keep running when a window closes or the app relaunches, and come back with their screen. One daemon per session, a CLI, and the wire protocol in [docs/session-protocol.md](docs/session-protocol.md).
 
 Integration guide: [docs/takocore.md](docs/takocore.md). Escape sequence policy: [docs/escape-sequence-policy.md](docs/escape-sequence-policy.md).
 

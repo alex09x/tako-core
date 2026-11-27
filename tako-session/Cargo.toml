@@ -3,7 +3,7 @@ name = "tako-session"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
-description = "Session runtime for Tako: the wire protocol between session daemons and clients"
+description = "Session runtime for Tako: a daemon per session that keeps shells alive, its clients and CLI"
 repository = "https://github.com/alex09x/tako-core"
 rust-version = "1.88"
 # Ships inside Tako, built from this workspace; tako-core is a path dependency.

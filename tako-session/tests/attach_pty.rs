@@ -71,6 +71,51 @@ fn a_terminal_app_starts_types_resizes_detaches_and_comes_back() {
     again.wait_for("still-2");
 }
 
+/// Open descriptors of `pid`.
+fn open_fds(pid: u32) -> usize {
+    if let Ok(dir) = std::fs::read_dir(format!("/proc/{pid}/fd")) {
+        return dir.count();
+    }
+    let out = std::process::Command::new("lsof")
+        .args(["-p", &pid.to_string()])
+        .output()
+        .unwrap();
+    String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .count()
+        .saturating_sub(1)
+}
+
+#[test]
+fn attach_inside_a_session_switches_the_client_without_leaking() {
+    let dir = Dir::new("ptyswitch");
+    let bin = dir.bin.to_str().unwrap().to_string();
+    let mut client = attach(&dir, &["attach", "w1", "/bin/sh"], &[]);
+    client.wait_for("session \"w1\" created");
+    let mut fds_after_first = 0;
+    for round in 0..6 {
+        let next = if round % 2 == 0 { "w2" } else { "w1" };
+        client.screen.clear();
+        // The shell in the session runs attach: the session's client switches.
+        client.write(format!("{bin} attach {next}\r").as_bytes());
+        // Leaving a session resets the terminal (RIS): the switch happened.
+        client.wait_for("\x1bc");
+        std::thread::sleep(Duration::from_millis(300));
+        client.write(b"echo in-$ZMX_SESSION-now\r");
+        client.wait_for(&format!("in-{next}-now"));
+        if round == 0 {
+            fds_after_first = open_fds(client.child.id());
+        }
+    }
+    let fds = open_fds(client.child.id());
+    assert!(
+        fds <= fds_after_first + 1,
+        "client fds grew from {fds_after_first} to {fds}"
+    );
+    client.write(b"\x1c");
+    assert_eq!(client.exit_within(Duration::from_secs(5)), Some(0));
+}
+
 #[test]
 fn the_app_going_away_leaves_the_session_running() {
     let dir = Dir::new("ptygone");

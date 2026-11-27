@@ -101,6 +101,7 @@ fn gone(e: &io::Error) -> bool {
 pub fn run(sock: i32, env_str: &[u8], unread: &[u8], detach_disabled: bool) -> io::Result<LoopEnd> {
     log::info(&format!("client loop fd={sock}"));
     let sig = signal::open_pipe()?;
+    let _pipe = signal::PipeGuard;
     signal::install_wake_handler(libc::SIGWINCH);
     set_nonblocking(sock)?;
 

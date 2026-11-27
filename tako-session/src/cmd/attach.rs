@@ -285,50 +285,53 @@ fn attach(ctx: &Ctx, opts: Options, labels: Option<&str>, out: &mut dyn Write) -
     if !current.is_empty() {
         return switch_session(ctx.cfg, &current, &opts.session);
     }
-    let name = opts.session.clone();
-    let socket_path = opts.socket_path.clone();
-    let cwd = opts.cwd.clone();
-    if ensure_session(opts, out).map_err(|_| CliError::Silent)? == Started::Daemon {
-        return Ok(());
-    }
-    // Labels land before the terminal is taken over, so a supervisor that
-    // dies right after cannot leave an unlabelled session behind.
-    if let Some(kvs) = labels {
-        labels::set(&ctx.cfg.socket_dir, &name, kvs)?;
-    }
-    let stream = socket::connect(&socket_path).map_err(|e| {
-        CliError::msg(format!(
-            "cannot connect to session \"{name}\": {}",
-            error_name(&e)
-        ))
-    })?;
-    log::info(&format!("attached session={name}"));
-    let _raw = term::RawMode::enter();
-    term::write_stdout(term::CLEAR);
-    let end = session_loop::run(
-        stream.as_raw_fd(),
-        &ctx.env_str,
-        b"",
-        keys::detach_key_disabled(ctx.env),
-    )
-    .map_err(|_| CliError::Silent)?;
-    match end {
-        LoopEnd::Detach => Ok(()),
-        LoopEnd::Switch {
+    // One pass per session: a switch leaves the old one (its connection,
+    // signal pipe and raw mode go with the pass) and joins the next.
+    let (mut opts, mut labels) = (opts, labels.map(str::to_string));
+    loop {
+        let name = opts.session.clone();
+        let socket_path = opts.socket_path.clone();
+        let cwd = opts.cwd.clone();
+        if ensure_session(opts, out).map_err(|_| CliError::Silent)? == Started::Daemon {
+            return Ok(());
+        }
+        // Labels land before the terminal is taken over, so a supervisor
+        // that dies right after cannot leave an unlabelled session behind.
+        if let Some(kvs) = labels.take() {
+            labels::set(&ctx.cfg.socket_dir, &name, &kvs)?;
+        }
+        let stream = socket::connect(&socket_path).map_err(|e| {
+            CliError::msg(format!(
+                "cannot connect to session \"{name}\": {}",
+                error_name(&e)
+            ))
+        })?;
+        log::info(&format!("attached session={name}"));
+        let end = {
+            let _raw = term::RawMode::enter();
+            term::write_stdout(term::CLEAR);
+            session_loop::run(
+                stream.as_raw_fd(),
+                &ctx.env_str,
+                b"",
+                keys::detach_key_disabled(ctx.env),
+            )
+            .map_err(|_| CliError::Silent)?
+        };
+        drop(stream);
+        let LoopEnd::Switch {
             session,
             cwd: next_cwd,
-        } => {
-            // Leave the old session before joining the next one.
-            drop(stream);
-            term::write_stdout(term::RESTORE);
-            let target_cwd = next_cwd.map(String::into_bytes).or(cwd);
-            log::info(&format!(
-                "switching to new session cwd={}",
-                String::from_utf8_lossy(target_cwd.as_deref().unwrap_or(b""))
-            ));
-            let target = ctx.options(&session, target_cwd)?;
-            attach(ctx, target, None, out)
-        }
+        } = end
+        else {
+            return Ok(());
+        };
+        let target_cwd = next_cwd.map(String::into_bytes).or(cwd);
+        log::info(&format!(
+            "switching to new session cwd={}",
+            String::from_utf8_lossy(target_cwd.as_deref().unwrap_or(b""))
+        ));
+        opts = ctx.options(&session, target_cwd)?;
     }
 }
 
