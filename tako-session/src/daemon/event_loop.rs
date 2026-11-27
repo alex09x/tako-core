@@ -307,10 +307,13 @@ impl Daemon {
             // The client hung up, maybe right after a request (`attach`
             // inside a session sends Switch and exits): what it sent is
             // still to be read. Nothing more goes out; the read closes it.
+            // macOS may report the hang-up as "not connected".
             Err(e)
                 if matches!(
                     e.kind(),
-                    io::ErrorKind::BrokenPipe | io::ErrorKind::ConnectionReset
+                    io::ErrorKind::BrokenPipe
+                        | io::ErrorKind::ConnectionReset
+                        | io::ErrorKind::NotConnected
                 ) =>
             {
                 c.write_buf.clear();

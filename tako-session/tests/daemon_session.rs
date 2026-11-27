@@ -35,11 +35,14 @@ fn bad_clients_are_dropped_and_the_session_carries_on() {
     header.extend_from_slice(&(1u32 << 30).to_le_bytes());
     header.extend_from_slice(&[0, 0, 0]);
     // The daemon may hang up as soon as the header is in: a write that then
-    // finds the socket closed is the drop itself, not a test failure.
+    // finds the socket closed is the drop itself, not a test failure
+    // (macOS reports it as "not connected").
     let gone = |e: &std::io::Error| {
         matches!(
             e.kind(),
-            std::io::ErrorKind::BrokenPipe | std::io::ErrorKind::ConnectionReset
+            std::io::ErrorKind::BrokenPipe
+                | std::io::ErrorKind::ConnectionReset
+                | std::io::ErrorKind::NotConnected
         )
     };
     let mut closed = false;
