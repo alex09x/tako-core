@@ -1,0 +1,30 @@
+_zmx_completions() {
+  local cur prev words cword
+  COMPREPLY=()
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+  local commands="attach run send print write detach list kill history get set clear print-env wait tail completions version help"
+
+  if [[ $COMP_CWORD -eq 1 ]]; then
+    COMPREPLY=($(compgen -W "$commands" -- "$cur"))
+    return 0
+  fi
+
+  case "$prev" in
+    attach|run|send|print|write|kill|history|get|set|clear|print-env|wait|tail)
+      local sessions=$(zmx list --short 2>/dev/null | tr '\n' ' ')
+      COMPREPLY=($(compgen -W "$sessions" -- "$cur"))
+      ;;
+    completions)
+      COMPREPLY=($(compgen -W "bash zsh fish nu" -- "$cur"))
+      ;;
+    list)
+      COMPREPLY=($(compgen -W "--short" -- "$cur"))
+      ;;
+    *)
+      ;;
+  esac
+}
+
+complete -o bashdefault -o default -F _zmx_completions zmx

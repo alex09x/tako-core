@@ -88,6 +88,14 @@ jobs:
           test "$("$HOME/.local/bin/mitts" --version | awk '{print $2}')" = "$MITTS_VERSION"
       - name: Test
         run: mitts test --locked --workspace --no-fail-fast --features pty,ssh
+      # Generous absolute bounds (benches/session.rs GATES): they catch a
+      # busy loop or a stalled pipeline, not a few percent.
+      - name: Session runtime bench gate
+        timeout-minutes: 10
+        env:
+          TAKO_SESSION_BENCH_QUICK: "1"
+          TAKO_SESSION_BENCH_GATE: "1"
+        run: mitts bench --locked -p tako-session
 
   swift-macos:
     name: TakoCoreUI tests (macOS arm64)

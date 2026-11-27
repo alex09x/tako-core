@@ -1,0 +1,156 @@
+zmx - session persistence for terminal processes
+
+Usage: zmx <command> [args...]
+
+Commands:
+  [a]ttach [--labels kv] <name> [command...]  Attach to session, creating if needed
+  [r]un <name> [-d] [command...]              Send command without attaching
+  [s]end <name> <text...>                     Send raw input to session PTY
+  [p]rint <name> <text...>                    Inject text into session display
+  [wr]ite <name> <file_path>                  Write stdin to file_path through the session
+  [d]etach                                    Detach all clients (ctrl+\\ for current client)
+  [l]ist|ls [--short]                         List active sessions
+  [g]et <name>                                Get session labels
+  set <name> k=v ...                          Set session labels (k= to remove)
+  [cl]ear <name>                              Clear all session labels
+  print-env [-s] <name> [key]                 Print tracked environment variables
+  [k]ill <name>... [--force]                  Kill session and all attached clients
+  [hi]story <name> [--vt|--html]              Output session scrollback
+  [w]ait <name>...                            Wait for session tasks to complete
+  [t]ail <name>...                            Follow session output
+  [c]ompletions <shell>                       Shell completions (bash, zsh, fish, nu)
+  [v]ersion                                   Show version and metadata (socket dir, log dir)
+  [h]elp                                      Show this help
+
+Attach:
+  This will spawn a login $SHELL with a PTY.  You can provide a
+  command instead of creating a shell.
+
+  --labels applies labels as the session is created, in the same form
+  `zmx set` takes. A caller that creates and then labels in two steps
+  leaves an unlabelled session behind if it dies between them.
+
+  Examples:
+    zmx attach dev
+    zmx attach dev vim
+    zmx attach --labels "project=api role=worker" build
+
+History:
+  This should generally be used with `tail` to print the last lines
+  of the session's scrollback history.
+
+  Examples:
+    zmx history <session> | tail -100
+
+Run:
+  Commands run inside a PTY using bash
+  Commands are passed as-is: do not wrap in quotes.
+  Commands run sequentially: do not send multiple in parallel.
+  Stdin is redirected from /dev/null to prevent interactive programs
+  (pagers, editors, prompts) from blocking. Use `zmx send` for
+  commands that need user input, or pipe data directly:
+    echo "data" | zmx run dev cat
+
+  `-d` will detach from the calling terminal. Use `wait` to track
+  its status.
+
+  Examples:
+    zmx run dev ls
+    zmx run dev zig build
+    zmx run dev grep -r TODO src
+    zmx run dev git log --oneline          # pager won't block
+    echo "hello" | zmx run dev cat         # piped stdin still works
+
+    # heredoc
+    printf "cat << 'EOF'\r\nHello $USER\r\nToday is $(date).\r\nEOF" | zmx run dev
+
+    # non-blocking
+    zmx run dev -d sleep 10
+    zmx wait dev
+
+Send:
+  Sends raw text to the session's PTY input (fire-and-forget).
+  Unlike `run`, no completion marker is appended and no exit code
+  is tracked.  Useful for TUI applications, interactive prompts,
+  or any program that reads stdin directly.
+
+  Text is sent byte-for-byte with no automatic carriage return.
+  Append \r yourself when you want the shell to execute a command.
+
+  Text can also be piped via stdin:
+    printf 'ls -la\r' | zmx send dev
+
+  Examples:
+    printf 'echo hello\r' | zmx send dev
+    zmx send dev $(printf '\x03')
+    zmx send dev /compact
+
+Print:
+  Injects text directly into the session display and scrollback.
+  Never touches the PTY input -- the shell sees nothing.
+  Caller is responsible for newlines (\\r\\n).
+
+  Examples:
+    printf '\\r\\nhello\\r\\n' | zmx print dev
+    zmx print dev "$(printf '\\r\\nalert\\r\\n')"
+
+Write:
+  Writes stdin to file_path inside the session. Works over SSH.
+  file_path can be absolute or relative to the session shell's cwd.
+  Requires base64 and printf in the remote environment.
+  Large files are chunked automatically (~48KB per chunk).
+  File path must not contain single quotes.
+
+  Examples:
+    echo "hello" | zmx write dev /tmp/hello.txt
+    cat main.zig | zmx write dev src/main.zig
+
+Wait:
+  Used with a detached run task to track its status.  Multiple
+  sessions can be provided.
+
+  Examples:
+    zmx run -d dev sleep 10
+    zmx wait dev
+    zmx wait dev other
+
+Labels:
+  Attach key=value labels to live sessions for discovery and
+  filtering. Labels are in-memory and scoped to session lifetime.
+
+  Examples:
+    zmx set dev project=zmx env=dev
+    zmx set dev project=            # unset a label
+    zmx set . status=fail           # "." resolves to current session
+    zmx get dev
+    zmx get dev project
+    zmx set next "$(zmx get prev)"  # set labels from other session
+    zmx list | grep project=zmx
+    zmx clear dev
+
+Print-env:
+  Print tracked environment variables for the leader client of a session.
+
+  Flags:
+    -s, --shell       Output POSIX export/unset commands for eval
+
+  Examples:
+    zmx print-env .
+    zmx print-env -s .
+    zmx print-env dev
+    zmx print-env dev DISPLAY
+    eval "$(zmx print-env -s .)"    # inside shell session precmd hook
+
+Environment variables:
+  SHELL                Default shell for new sessions
+  ZMX_DIR              Socket directory (priority 1)
+  XDG_RUNTIME_DIR      Socket directory (priority 2)
+  TMPDIR               Socket directory (priority 3)
+  ZMX_SESSION          Session name (injected automatically; makes attach
+                       switch this session)
+  ZMX_SESSION_PREFIX   Prefix added to all session names
+  ZMX_TRACK_ENV        Comma-separated list of environment variables to track
+                       from attaching clients
+  ZMX_DIR_MODE         Sets mode for socket and log directories (octal, defaults to 0750)
+  ZMX_LOG_MODE         Sets mode for log files (octal, defaults to 0640)
+  ZMX_NO_DETACH_KEY    Disables the ctrl+\ detach shortcut (set to any value)

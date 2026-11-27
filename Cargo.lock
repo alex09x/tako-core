@@ -4692,6 +4692,10 @@ dependencies = [
 [[package]]
 name = "tako-session"
 version = "0.1.0"
+dependencies = [
+ "libc",
+ "tako-core",
+]
 
 [[package]]
 name = "tempfile"

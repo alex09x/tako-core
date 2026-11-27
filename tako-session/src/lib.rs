@@ -10,8 +10,23 @@
 
 //! The session runtime Tako keeps shells alive with across a relaunch.
 //!
-//! So far this crate provides the wire protocol between a session daemon and
-//! its clients (`ipc`): frames, tags, payloads and labels, as documented in
-//! `docs/session-protocol.md`. The daemon and the client commands build on it.
+//! A daemon per session (`daemon`) owns the PTY and keeps the screen in a
+//! `tako_core` terminal; clients (`client`, `cmd`) attach to it or query it
+//! over a Unix socket in the wire protocol of `ipc`, as documented in
+//! `docs/session-protocol.md`.
 
+pub mod ansi;
+pub mod cfg;
+pub mod cli;
+pub mod client;
+pub mod cmd;
+pub mod daemon;
+pub mod input;
 pub mod ipc;
+pub mod keys;
+pub mod log;
+pub mod osc7;
+pub mod pty_text;
+pub mod signal;
+pub mod socket;
+pub mod term;
