@@ -95,6 +95,9 @@ public final class MetalTerminalRenderer {
 
     var atlasTexturesForTesting: [MTLTexture?] { atlasTextures }
     var nextDrawableProvider: (CAMetalLayer) -> CAMetalDrawable? = { $0.nextDrawable() }
+    /// Called with each committed frame's pixels (4 bytes each). The layer
+    /// must allow readback (`framebufferOnly = false`) and use an 8-bit
+    /// format; otherwise frames are drawn without a capture.
     public var committedFrameCaptureForTesting: ((FfiRenderFrame, [UInt8]) -> Void)?
 
     public internal(set) var customShaders: [TerminalCustomShader] = []

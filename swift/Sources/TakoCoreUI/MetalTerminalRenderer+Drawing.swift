@@ -164,6 +164,11 @@ extension MetalTerminalRenderer {
         return drawable == nil ? .committedOffscreen : .presented
     }
 
+    /// The color target formats a capture can copy: 8 bits per channel.
+    static let capturePixelFormats: Set<MTLPixelFormat> = [
+        .bgra8Unorm, .bgra8Unorm_srgb, .rgba8Unorm, .rgba8Unorm_srgb,
+    ]
+
     /// Blit this pass's color target into shared memory. Returns nil -- and
     /// encodes nothing -- when the target cannot be read back, so a capture
     /// that is impossible degrades to no capture rather than to a wrong one.
@@ -171,7 +176,12 @@ extension MetalTerminalRenderer {
         into commandBuffer: MTLCommandBuffer,
         from descriptor: MTLRenderPassDescriptor
     ) -> MTLBuffer? {
-        guard let texture = descriptor.colorAttachments[0].texture else { return nil }
+        // A framebuffer-only drawable (the layer's default) has no readable
+        // contents, and the capture's pixels are 4 bytes each.
+        guard let texture = descriptor.colorAttachments[0].texture,
+              !texture.isFramebufferOnly,
+              Self.capturePixelFormats.contains(texture.pixelFormat)
+        else { return nil }
         let bytesPerRow = texture.width * 4
         let length = bytesPerRow * texture.height
         guard length > 0,
