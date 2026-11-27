@@ -243,6 +243,29 @@ fn the_shell_screen_behind_a_full_screen_program_comes_back_when_it_exits() {
 }
 
 #[test]
+fn leaving_the_alternate_screen_restores_what_entering_saved() {
+    // (enter, leave, what the shell does after leaving)
+    let cases: [(&[u8], &[u8], &[u8]); 3] = [
+        // Entered with 1047: nothing saved, the cursor stays where it is.
+        (b"$ top\r\n\x1b[?1047h\x1b[Hframe", b"\x1b[?1047l", b"after"),
+        // A wrap was pending at the right edge when the program started.
+        (b"0123456789\x1b[?1049h\x1b[Hframe", b"\x1b[?1049l", b"X"),
+        // Line drawing was on: what follows the exit is still translated.
+        (b"\x1b(0lqk\x1b[?1049h\x1b[Hframe", b"\x1b[?1049l", b"q"),
+    ];
+    for (enter, leave, after) in cases {
+        let mut src = source(10, 4, enter);
+        let mut dst = replayed(&src);
+        assert_same(&src, &dst);
+        for t in [&mut src, &mut dst] {
+            t.feed(leave);
+            t.feed(after);
+        }
+        assert_same(&src, &dst);
+    }
+}
+
+#[test]
 fn line_drawing_stays_on_after_a_replay() {
     // A program draws a border, and keeps drawing after the client returns.
     let src = source(20, 3, b"\x1b(0lqqk");

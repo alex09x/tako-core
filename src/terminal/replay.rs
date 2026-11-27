@@ -109,6 +109,15 @@ fn style_of(cell: &Cell) -> Style {
     )
 }
 
+/// The final byte that designates `charset`; None for ASCII, the default.
+fn designator(charset: Charset) -> Option<u8> {
+    match charset {
+        Charset::Ascii => None,
+        Charset::DecSpecialGraphics => Some(b'0'),
+        Charset::British => Some(b'A'),
+    }
+}
+
 fn is_blank(cell: &Cell) -> bool {
     (cell.char == '\0' || cell.char == ' ') && cell.attrs.is_empty() && cell.bg == Color::Default
 }
@@ -225,23 +234,51 @@ impl Terminal {
     /// alternate screen, so leaving it later (1049l) lands where it would
     /// have. Entering with 1049h saves exactly that cursor again.
     fn write_primary_behind_alternate(&self, out: &mut Vec<u8>) {
-        let saved = self.cursor.saved;
-        let (row, col) = saved.map_or((0, 0), |s| (s.row, s.col));
-        Self::screen_with_history(&self.primary, row, out);
+        let Some(saved) = self.cursor.saved else {
+            // Entered without saving a cursor (47 or 1047): the shell
+            // screen comes back, but nothing is saved for leaving.
+            Self::screen_with_history(&self.primary, self.primary.rows().saturating_sub(1), out);
+            out.extend_from_slice(b"\x1b[?1047h\x1b[H\x1b[0m");
+            return;
+        };
         let rows = self.primary.rows();
         let cols = self.primary.cols();
-        out.extend_from_slice(
-            format!(
-                "\x1b[{};{}H",
-                row.min(rows.saturating_sub(1)) + 1,
-                col.min(cols.saturating_sub(1)) + 1
-            )
-            .as_bytes(),
+        let (row, col) = (
+            saved.row.min(rows.saturating_sub(1)),
+            saved.col.min(cols.saturating_sub(1)),
         );
-        if let Some(s) = saved {
-            sgr_into(out, (s.fg, s.bg, s.attrs, 0, Color::Default));
+        Self::screen_with_history(&self.primary, row, out);
+        out.extend_from_slice(format!("\x1b[{};{}H", row + 1, col + 1).as_bytes());
+        // A pending wrap is part of what 1049l restores: reprinting the
+        // saved cell sets it again before the cursor is saved.
+        if saved.pending_wrap
+            && let Some(cell) = self.primary.get(row, col).filter(|c| !c.is_wide_spacer)
+        {
+            sgr_into(out, style_of(cell));
+            let ch = if cell.char == '\0' { ' ' } else { cell.char };
+            out.extend_from_slice(ch.encode_utf8(&mut [0u8; 4]).as_bytes());
+        }
+        sgr_into(out, (saved.fg, saved.bg, saved.attrs, 0, Color::Default));
+        // The saved character sets too; the alternate screen's own are set
+        // after it is drawn (write_charsets).
+        for (slot, charset) in [(b'(', saved.g0), (b')', saved.g1)] {
+            if let Some(fin) = designator(charset) {
+                out.extend_from_slice(&[0x1b, slot, fin]);
+            }
+        }
+        if saved.shift_out {
+            out.push(0x0e);
         }
         out.extend_from_slice(b"\x1b[?1049h\x1b[H\x1b[0m");
+        // Back to the defaults for drawing: the cells hold translated glyphs.
+        if saved.shift_out {
+            out.push(0x0f);
+        }
+        for (slot, charset) in [(b'(', saved.g0), (b')', saved.g1)] {
+            if designator(charset).is_some() {
+                out.extend_from_slice(&[0x1b, slot, b'B']);
+            }
+        }
     }
 
     fn write_modes(&self, out: &mut Vec<u8>) {
@@ -378,12 +415,9 @@ impl Terminal {
             (b'*', self.g2),
             (b'+', self.g3),
         ] {
-            let fin = match charset {
-                Charset::Ascii => continue,
-                Charset::DecSpecialGraphics => b'0',
-                Charset::British => b'A',
-            };
-            out.extend_from_slice(&[0x1b, slot, fin]);
+            if let Some(fin) = designator(charset) {
+                out.extend_from_slice(&[0x1b, slot, fin]);
+            }
         }
         if self.shift_out {
             out.push(0x0e);
