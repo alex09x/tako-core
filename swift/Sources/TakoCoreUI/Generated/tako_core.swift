@@ -1369,6 +1369,13 @@ public protocol TakoCoreProtocol: AnyObject, Sendable {
     func setBaseColors(foreground: FfiRgb?, background: FfiRgb?, cursor: FfiRgb?, palette: [FfiPaletteEntry])
 
     /**
+     * Host setting `bold-is-bright`: bold text in basic colours 0-7 is drawn
+     * in bright colours 8-15. Off by default; kept across `reset` and
+     * checkpoint restores.
+     */
+    func setBoldIsBright(enabled: Bool)
+
+    /**
      * Tells the engine whether the host shows a dark or a light colour scheme.
      */
     func setColorScheme(dark: Bool)
@@ -2655,6 +2662,20 @@ open func setBaseColors(foreground: FfiRgb?, background: FfiRgb?, cursor: FfiRgb
         FfiConverterOptionTypeFfiRgb.lower(background),
         FfiConverterOptionTypeFfiRgb.lower(cursor),
         FfiConverterSequenceTypeFfiPaletteEntry.lower(palette),uniffiCallStatus
+    )
+}
+}
+
+    /**
+     * Host setting `bold-is-bright`: bold text in basic colours 0-7 is drawn
+     * in bright colours 8-15. Off by default; kept across `reset` and
+     * checkpoint restores.
+     */
+open func setBoldIsBright(enabled: Bool)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_tako_core_fn_method_takocore_set_bold_is_bright(
+            self.uniffiCloneHandle(),
+        FfiConverterBool.lower(enabled),uniffiCallStatus
     )
 }
 }
@@ -8760,6 +8781,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_tako_core_checksum_method_takocore_set_base_colors() != 32373) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_tako_core_checksum_method_takocore_set_bold_is_bright() != 59738) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_tako_core_checksum_method_takocore_set_color_scheme() != 41115) {

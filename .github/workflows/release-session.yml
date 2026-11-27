@@ -1,0 +1,93 @@
+# tako-core — tako-session release binaries
+# Copyright (c) 2026 Alexander Panasenko
+# Contact: alex@prod.codes
+# Author: https://prod.codes/about/
+# Project: https://github.com/alex09x/tako-core
+# SPDX-License-Identifier: MIT
+
+# A `session-vX.Y.Z` tag builds tako-session for macOS arm64 and Linux x86_64
+# and publishes both, with their SHA-256 sums, as that tag's release.
+name: Release tako-session
+
+on:
+  push:
+    tags: ["session-v*"]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: never
+  MITTS_NO_SOURCE_FALLBACK: "1"
+  MITTS_VERSION: "0.5.7"
+
+jobs:
+  build:
+    name: build (${{ matrix.asset }})
+    strategy:
+      matrix:
+        include:
+          - os: macos-26
+            asset: tako-session-macos-arm64
+          # The oldest supported runner: its glibc is the floor the binary needs.
+          - os: ubuntu-22.04
+            asset: tako-session-linux-x86_64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Bootstrap Mitts
+        run: |
+          set -euo pipefail
+          curl -fsSL https://mittsbuild.com/install.sh -o "$RUNNER_TEMP/mitts-install.sh"
+          sh -n "$RUNNER_TEMP/mitts-install.sh"
+          MITTS_INSTALL_ROOT="$HOME/.local" sh "$RUNNER_TEMP/mitts-install.sh"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          test "$("$HOME/.local/bin/mitts" --version | awk '{print $2}')" = "$MITTS_VERSION"
+      - name: Build
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "14.0"
+        run: mitts build --locked --release -p tako-session
+      - name: Package
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          want="${tag#session-v}"
+          got="$(target/release/tako-session version | awk '$1=="tako_core"{print $2}')"
+          echo "binary reports: $got"
+          test "$got" = "$want" || { echo "version $got does not match tag $tag" >&2; exit 1; }
+          mkdir -p dist
+          cp target/release/tako-session "dist/${{ matrix.asset }}"
+          strip "dist/${{ matrix.asset }}" || true
+          cd dist
+          shasum -a 256 "${{ matrix.asset }}" > "${{ matrix.asset }}.sha256"
+          cat "${{ matrix.asset }}.sha256"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ls -l dist
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "tako-session ${GITHUB_REF_NAME#session-v}" \
+            --notes "tako-session ${GITHUB_REF_NAME#session-v}: the session runtime as a single binary for macOS arm64 (macOS 14+) and Linux x86_64. Each binary has a .sha256 file next to it. See tako-session/README.md."

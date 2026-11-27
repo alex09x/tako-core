@@ -48,7 +48,7 @@ The iOS sample excludes x86_64 for the simulator: the engine has arm64
 slices only.
 
 An app outside this repository depends on the root package at a release tag
-(`.package(url: "https://github.com/alex09x/tako", exact: "<release>")`),
+(`.package(url: "https://github.com/alex09x/tako-core", exact: "<release>")`),
 whose published engine matches that tag's Swift sources. A revision between
 releases has Swift sources newer than the last published engine and is not
 meant to be consumed that way.
@@ -117,7 +117,9 @@ knows fails as an unsupported version, never as corruption.
 
 ## Versioning
 
-TakoCore follows semantic versioning from 1.0. Until then (0.x):
+TakoCore follows semantic versioning from 1.0. Releases of the package and
+the engine are tagged `vX.Y.Z` (SwiftPM reads only such tags); the session
+runtime is released separately as `session-vX.Y.Z`. Until 1.0 (0.x):
 
 - A **patch** release (0.1.x) does not remove or change the meaning of
   anything public in the Swift package, the C headers or the crate. It may
@@ -129,10 +131,6 @@ TakoCore follows semantic versioning from 1.0. Until then (0.x):
   one-line edit it needs. The views (`TakoTerminalNSView`,
   `TakoTerminalView`) and their delegates follow the patch rule above.
 
-  0.1.4 is the first such release: `FfiEvent.commandStart` carries
-  `id: UInt64?` (match it as `.commandStart` or `.commandStart(let id)`;
-  construct it as `.commandStart(id: nil)`), and `FfiSearchHit` has a new
-  `command: FfiCommandInfo?` (pass `command: nil` where you build one).
 - A **minor** release (0.x.0) may change public API. Every change is listed
   in the release notes with what to do instead.
 - **The C ABI is additive.** An exported C function keeps its signature and
