@@ -67,6 +67,8 @@ jobs:
           test "$("$HOME/.local/bin/mitts" --version | awk '{print $2}')" = "$MITTS_VERSION"
       - name: Test
         run: mitts test --locked --workspace --no-fail-fast --features pty,ssh
+      - name: Engine benches run once (no timing)
+        run: mitts bench --locked --bench throughput -- --test
 
   engine-linux:
     name: engine tests (Linux x86_64)
@@ -113,7 +115,7 @@ jobs:
         run: scripts/swift-test.sh
 
   ios-build:
-    name: TakoCoreUI build (iOS Simulator)
+    name: TakoCoreUI build and tests (iOS Simulator)
     runs-on: macos-26
     timeout-minutes: 60
     steps:
@@ -140,3 +142,5 @@ jobs:
         env:
           TAKOCORE_LOCAL_XCFRAMEWORK: "1"
         run: xcodebuild build -scheme TakoCoreUI -destination 'generic/platform=iOS Simulator' ARCHS=arm64 -quiet
+      - name: TakoCoreUI tests on the iOS Simulator
+        run: scripts/test-ios-surface.sh
