@@ -24,7 +24,7 @@ open class TakoTerminalNSView: NSView, NSUserInterfaceValidations {
     /// Optional typed consume-once reply handler. When installed, replies are routed here instead of `sendDeviceReplyData`.
     public var onClassifiedReplies: ((TerminalClassifiedReplyBatch) -> Void)?
     public let core: TakoCore
-    public let parserCoordinator: TerminalParserCoordinator
+    let parserCoordinator: TerminalParserCoordinator
 
     let scrollbarLayer = CALayer()
     let scrollbarKnob = CALayer()
@@ -158,6 +158,9 @@ open class TakoTerminalNSView: NSView, NSUserInterfaceValidations {
         }
     }
     public internal(set) var renderer: TerminalRenderer
+    /// The grid size the view lays out for. Setting it records a size the
+    /// engine already has (a restored snapshot); it does not resize the
+    /// engine. To change the size, use `scheduleGridResize` or `resizeParser`.
     public var cols: Int = 80
     public var rows: Int = 24
     public var title: String = "" {

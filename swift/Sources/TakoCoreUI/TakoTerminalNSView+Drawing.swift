@@ -178,7 +178,23 @@ extension TakoTerminalNSView {
         applyPendingGridResize()
     }
 
+    /// Whether the engine can hold a `cols` x `rows` grid.
+    static func isEngineGridSize(cols: Int, rows: Int) -> Bool {
+        cols > 0 && rows > 0 && UInt32(exactly: cols) != nil && UInt32(exactly: rows) != nil
+    }
+
+    /// Resizes the engine's grid now, behind any output still being parsed,
+    /// without waiting for the view's own resize scheduling: for a host that
+    /// has fitted a new size before the program starts. Main thread only.
+    public func resizeParser(cols: Int, rows: Int) {
+        guard Self.isEngineGridSize(cols: cols, rows: rows) else { return }
+        parserCoordinator.resize(cols: cols, rows: rows)
+    }
+
     public func scheduleGridResize(cols newCols: Int, rows newRows: Int, immediate: Bool = false) {
+        // A grid the engine cannot hold (empty during layout, or wider than
+        // its 32-bit sizes) leaves the view and the engine as they are.
+        guard Self.isEngineGridSize(cols: newCols, rows: newRows) else { return }
         if newCols == cols, newRows == rows {
             pendingResizeWorkItem?.cancel()
             pendingResizeWorkItem = nil

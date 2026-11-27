@@ -32,6 +32,7 @@ extension TakoCore {
             background: Self.rgb(theme.background),
             cursor: Self.rgb(theme.cursorColor),
             palette: palette)
+        setBoldIsBright(enabled: theme.boldIsBright)
     }
 
     /// Makes `theme`'s cursor the engine's default: what a program's

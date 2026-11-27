@@ -80,6 +80,23 @@ final class TerminalThemeConfigKeysTests: XCTestCase {
         XCTAssertNotNil(both.palette[9])
     }
 
+    /// `setBaseColors(from:)` hands the flag to the engine: bold red is drawn
+    /// in the theme's bright red (palette 9) only when the theme says so.
+    func testSetBaseColorsAppliesBoldIsBright() {
+        func boldRed(_ config: String) -> (UInt8, UInt8, UInt8) {
+            let core = TakoCore(cols: 10, rows: 2)
+            core.setBaseColors(from: TerminalTheme.parse(config: config))
+            core.feed(bytes: Data("\u{1b}[1;31mX".utf8))
+            guard let cell = core.getCell(row: 0, col: 0) else { return (0, 0, 0) }
+            return (cell.fgR, cell.fgG, cell.fgB)
+        }
+        let bright = (UInt8(0x10), UInt8(0x20), UInt8(0x30))
+        let on = boldRed("palette = 9=#102030\nbold-is-bright = true")
+        XCTAssertTrue(on == bright, "bold red with bold-is-bright: \(on)")
+        let off = boldRed("palette = 9=#102030\nbold-is-bright = false")
+        XCTAssertFalse(off == bright, "bold red without bold-is-bright: \(off)")
+    }
+
     // MARK: - cursor-opacity
 
     func testCursorOpacityParsesClampsAndDefaultsToOne() {

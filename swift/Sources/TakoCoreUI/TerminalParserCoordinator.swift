@@ -17,7 +17,7 @@ import OSLog
 /// off Main, and every consequence of driving it -- device replies, host
 /// events, redraw scheduling, any UI state at all -- is applied on Main
 /// in exactly the order the batches were parsed.
-public final class TerminalParserCoordinator: @unchecked Sendable {
+final class TerminalParserCoordinator: @unchecked Sendable {
     /// The most bytes handed to one `feedWithOutcome` call.
     static let maxBatchBytes = 4 * 1024 * 1024
     private static let parserQueueKey = DispatchSpecificKey<ObjectIdentifier>()
@@ -198,7 +198,7 @@ public final class TerminalParserCoordinator: @unchecked Sendable {
 
     // MARK: - Resize barrier
 
-    public func resize(cols: Int, rows: Int) {
+    func resize(cols: Int, rows: Int) {
         guard cols > 0, rows > 0 else { return }
         lock.lock()
         guard !isShutDown else { lock.unlock(); return }

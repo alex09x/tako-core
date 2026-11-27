@@ -134,13 +134,8 @@ public struct TerminalTheme {
     /// `bold-is-bright`: bold text in one of the eight basic colors (0-7) is
     /// drawn in its bright counterpart (8-15). Off by default.
     ///
-    /// Internal, not public: only the desktop app, which compiles these
-    /// sources with its own bindings, can hand it to the engine. The
-    /// published engine binary TakoCoreUI's checked-in binding pairs with
-    /// has no `set_bold_is_bright`, and the binding's load-time API checksum
-    /// check rejects a method that binary lacks. It becomes public, applied in
-    /// `TakoCore.setBaseColors(from:)` for every view, with the engine
-    /// release that ships it.
+    /// `TakoCore.setBaseColors(from:)` hands it to the engine with the
+    /// theme's colors, so every view applies it on a theme change.
     public var boldIsBright = false
     /// User overrides for the tab's lifecycle indicators, independent of ANSI colors.
     public var tabStatusColors: [String: CGColor] = [:]
