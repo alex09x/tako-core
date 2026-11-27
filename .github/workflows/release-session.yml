@@ -12,6 +12,9 @@ name: Release tako-session
 on:
   push:
     tags: ["session-v*"]
+  # A change to this workflow builds both binaries without publishing them.
+  pull_request:
+    paths: [".github/workflows/release-session.yml"]
 
 permissions:
   contents: read
@@ -19,31 +22,43 @@ permissions:
 env:
   CARGO_TERM_COLOR: never
   MITTS_NO_SOURCE_FALLBACK: "1"
+  # Raise together with the two mitts_sha256 digests below.
   MITTS_VERSION: "0.5.7"
 
 jobs:
   build:
     name: build (${{ matrix.asset }})
     strategy:
+      # Both platforms report, even when one fails; publish needs both.
+      fail-fast: false
       matrix:
         include:
           - os: macos-26
             asset: tako-session-macos-arm64
+            mitts: aarch64-apple-darwin
+            mitts_sha256: 848d4f63fa0239e27b5e18e8080fbd8ce50d0bfa7d6f5bc13094b629afa23600
           # The oldest supported runner: its glibc is the floor the binary needs.
           - os: ubuntu-22.04
             asset: tako-session-linux-x86_64
+            mitts: x86_64-unknown-linux-gnu
+            mitts_sha256: 30ac14a4c427c537bdb4a61b720ec68b2cd8131bc9fe3e7ee1a3523f92ad9e66
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
-      - name: Bootstrap Mitts
+      # The release archive itself, checked against a digest kept here: nothing
+      # downloaded runs before it is verified.
+      - name: Install Mitts
         run: |
           set -euo pipefail
-          curl -fsSL https://mittsbuild.com/install.sh -o "$RUNNER_TEMP/mitts-install.sh"
-          sh -n "$RUNNER_TEMP/mitts-install.sh"
-          MITTS_INSTALL_ROOT="$HOME/.local" sh "$RUNNER_TEMP/mitts-install.sh"
+          archive="mitts-v${MITTS_VERSION}-${{ matrix.mitts }}.tar.gz"
+          curl -fsSL --proto '=https' --tlsv1.2 -o "$RUNNER_TEMP/$archive" \
+            "https://github.com/alex09x/mitts/releases/download/v${MITTS_VERSION}/$archive"
+          echo "${{ matrix.mitts_sha256 }}  $RUNNER_TEMP/$archive" | shasum -a 256 -c -
+          mkdir -p "$HOME/.local/bin"
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$HOME/.local/bin" mitts
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           test "$("$HOME/.local/bin/mitts" --version | awk '{print $2}')" = "$MITTS_VERSION"
       - name: Build
@@ -53,11 +68,12 @@ jobs:
       - name: Package
         run: |
           set -euo pipefail
-          tag="${GITHUB_REF_NAME}"
-          want="${tag#session-v}"
           got="$(target/release/tako-session version | awk '$1=="tako_core"{print $2}')"
           echo "binary reports: $got"
-          test "$got" = "$want" || { echo "version $got does not match tag $tag" >&2; exit 1; }
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            want="${GITHUB_REF_NAME#session-v}"
+            test "$got" = "$want" || { echo "version $got does not match tag $GITHUB_REF_NAME" >&2; exit 1; }
+          fi
           mkdir -p dist
           cp target/release/tako-session "dist/${{ matrix.asset }}"
           strip "dist/${{ matrix.asset }}" || true
@@ -72,6 +88,7 @@ jobs:
 
   publish:
     needs: build
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -87,7 +104,7 @@ jobs:
         run: |
           set -euo pipefail
           ls -l dist
-          gh release create "$GITHUB_REF_NAME" dist/* \
+          gh release create "$GITHUB_REF_NAME" dist/* --verify-tag \
             --repo "$GITHUB_REPOSITORY" \
             --title "tako-session ${GITHUB_REF_NAME#session-v}" \
             --notes "tako-session ${GITHUB_REF_NAME#session-v}: the session runtime as a single binary for macOS arm64 (macOS 14+) and Linux x86_64. Each binary has a .sha256 file next to it. See tako-session/README.md."
