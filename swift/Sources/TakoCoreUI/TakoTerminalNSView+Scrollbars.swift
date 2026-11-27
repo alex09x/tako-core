@@ -15,9 +15,9 @@ import AppKit
 import QuartzCore
 
 extension TakoTerminalNSView {
-    /// Internal, not private: a host that moved the viewport in the engine
+    /// Public: a host that moved the viewport in the engine
     /// directly (a search selecting a hit) calls it so the scrollbar follows.
-    func notifyScrollPositionIfChanged() {
+    public func notifyScrollPositionIfChanged() {
         updateScroller()
         
         let position = core.scrollPosition()

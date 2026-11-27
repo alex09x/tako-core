@@ -46,7 +46,7 @@ extension TerminalTheme {
         applyingTheme(named: name, searchPaths: Self.themeSearchPaths)
     }
 
-    func applyingTheme(named name: String, searchPaths: [String]) -> TerminalTheme {
+    public func applyingTheme(named name: String, searchPaths: [String]) -> TerminalTheme {
         for dir in searchPaths {
             let path = (dir as NSString).appendingPathComponent(name)
             guard let text = try? String(contentsOfFile: path, encoding: .utf8) else { continue }
@@ -318,7 +318,7 @@ extension TerminalTheme {
         return String(value.dropFirst().dropLast())
     }
 
-    static func parseBool(_ s: String) -> Bool? {
+    public static func parseBool(_ s: String) -> Bool? {
         switch s.trimmingCharacters(in: .whitespaces) {
         case "true": return true
         case "false": return false

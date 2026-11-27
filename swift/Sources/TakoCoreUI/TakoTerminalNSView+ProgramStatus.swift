@@ -47,7 +47,7 @@ extension TakoTerminalNSView {
         delegate?.terminalView(self, didUpdateProgramStatus: event)
     }
 
-    func applyProgramStatusProgressBar(from snapshot: TerminalProgramStatusSnapshot) {
+    public func applyProgramStatusProgressBar(from snapshot: TerminalProgramStatusSnapshot) {
         guard let effective = snapshot.effective else {
             if snapshot.osc7501Active {
                 updateProgressBar(state: .none, progress: nil)
@@ -86,7 +86,7 @@ extension TakoTerminalNSView {
         }
     }
 
-    func deliverFeedReplies(
+    public func deliverFeedReplies(
         _ outcome: FfiFeedOutcome,
         legacySink: ((Data) -> Void)? = nil
     ) {

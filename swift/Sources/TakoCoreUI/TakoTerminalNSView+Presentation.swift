@@ -18,7 +18,7 @@ extension TakoTerminalNSView {
     // MARK: - Redraw Scheduling & Display Link
 
     /// State captured by the app self-test when waiting for a real submission.
-    var selfTestPresentationDiagnostics: String {
+    public var selfTestPresentationDiagnostics: String {
         "window=\(window != nil) visible=\(window?.isVisible == true)"
             + " occluded=\(window?.occlusionState.contains(.visible) != true) hidden=\(isHiddenOrHasHiddenAncestor)"
             + " bounds=\(bounds.size) drawable=\(metalLayer?.drawableSize ?? .zero)"

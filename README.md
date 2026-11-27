@@ -32,7 +32,7 @@ Details, limits and the versioning rules are in [docs/takocore.md](docs/takocore
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/alex09x/tako-core", exact: "0.1.0"),
+    .package(url: "https://github.com/alex09x/tako-core", exact: "0.1.1"),
 ],
 targets: [
     .target(name: "MyApp", dependencies: [
@@ -47,7 +47,7 @@ SwiftPM downloads `TakoCore.xcframework` from the release and checks it against 
 
 ```toml
 [dependencies]
-tako-core = { git = "https://github.com/alex09x/tako-core", tag = "v0.1.0" }
+tako-core = { git = "https://github.com/alex09x/tako-core", tag = "v0.1.1" }
 ```
 
 ```rust

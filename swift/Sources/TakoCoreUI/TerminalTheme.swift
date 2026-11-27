@@ -141,7 +141,7 @@ public struct TerminalTheme {
     /// check rejects a method that binary lacks. It becomes public, applied in
     /// `TakoCore.setBaseColors(from:)` for every view, with the engine
     /// release that ships it.
-    var boldIsBright = false
+    public var boldIsBright = false
     /// User overrides for the tab's lifecycle indicators, independent of ANSI colors.
     public var tabStatusColors: [String: CGColor] = [:]
 

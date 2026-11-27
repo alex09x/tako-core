@@ -16,12 +16,12 @@ import AppKit
 extension TakoTerminalNSView {
     // MARK: - Copy & Paste
 
-    @objc public func copy(_ sender: Any?) {
+    @objc open func copy(_ sender: Any?) {
         guard let text = core.selectedText() else { return }
         copyStringConsumer(text)
     }
 
-    @objc public func paste(_ sender: Any?) {
+    @objc open func paste(_ sender: Any?) {
         guard let string = pasteStringProvider() else { return }
         revealLiveScreenForUserInput()
         handlePaste(string)

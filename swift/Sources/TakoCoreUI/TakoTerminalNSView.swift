@@ -24,7 +24,7 @@ open class TakoTerminalNSView: NSView, NSUserInterfaceValidations {
     /// Optional typed consume-once reply handler. When installed, replies are routed here instead of `sendDeviceReplyData`.
     public var onClassifiedReplies: ((TerminalClassifiedReplyBatch) -> Void)?
     public let core: TakoCore
-    let parserCoordinator: TerminalParserCoordinator
+    public let parserCoordinator: TerminalParserCoordinator
 
     let scrollbarLayer = CALayer()
     let scrollbarKnob = CALayer()
@@ -50,8 +50,8 @@ open class TakoTerminalNSView: NSView, NSUserInterfaceValidations {
     var isHoveringStickyHeader = false
     public internal(set) var activeStickyCommandHeader: StickyCommandHeader?
 
-    public internal(set) var activeProgressState: ProgressState = .none
-    public internal(set) var activeProgressValue: Int? = nil
+    public var activeProgressState: ProgressState = .none
+    public var activeProgressValue: Int? = nil
     var deliveredOsc7501Active = false
 
     public let contextTintLayer = CALayer()
@@ -158,8 +158,8 @@ open class TakoTerminalNSView: NSView, NSUserInterfaceValidations {
         }
     }
     public internal(set) var renderer: TerminalRenderer
-    public internal(set) var cols: Int = 80
-    public internal(set) var rows: Int = 24
+    public var cols: Int = 80
+    public var rows: Int = 24
     public var title: String = "" {
         didSet { if title != oldValue { titleDidChange() } }
     }
@@ -222,7 +222,7 @@ open class TakoTerminalNSView: NSView, NSUserInterfaceValidations {
     var isBlinkStateVisibleForTesting: Bool { blinkStateVisible }
 
     var pasteStringProvider: () -> String? = { NSPasteboard.general.string(forType: .string) }
-    var copyStringConsumer: (String) -> Void = { text in
+    public var copyStringConsumer: (String) -> Void = { text in
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
     }

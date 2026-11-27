@@ -197,7 +197,7 @@ extension TakoTerminalNSView {
         scheduleRedraw()
     }
 
-    func revealLiveScreenForUserInput() {
+    public func revealLiveScreenForUserInput() {
         guard viewportOffset > 0 else { return }
         scrollViewportToBottom()
     }

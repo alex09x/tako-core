@@ -22,7 +22,7 @@ extension TakoTerminalNSView {
 
     /// The renderer currently drawing this surface, so a test can prove the
     /// two share one clock rather than each keeping a private count.
-    var metalRendererForTesting: MetalTerminalRenderer? { metalRenderer }
+    public var metalRendererForTesting: MetalTerminalRenderer? { metalRenderer }
 
     // MARK: - Metal renderer lifecycle
 

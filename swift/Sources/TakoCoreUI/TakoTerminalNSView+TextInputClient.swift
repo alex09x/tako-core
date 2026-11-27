@@ -198,7 +198,7 @@ extension TakoTerminalNSView: NSTextInputClient {
 
     override open func doCommand(by selector: Selector) {}
 
-    public func validateUserInterfaceItem(_ item: NSValidatedUserInterfaceItem) -> Bool {
+    open func validateUserInterfaceItem(_ item: NSValidatedUserInterfaceItem) -> Bool {
         if item.action == #selector(copy(_:)) {
             return core.hasSelection()
         }
