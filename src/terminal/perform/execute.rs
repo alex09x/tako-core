@@ -107,20 +107,18 @@ impl Terminal {
             }
             return;
         }
-        if intermediates == *b"(" {
-            self.g0 = Self::charset_for_designator(byte);
-            return;
-        }
-        if intermediates == *b")" {
-            self.g1 = Self::charset_for_designator(byte);
-            return;
-        }
-        if intermediates == *b"*" {
-            self.g2 = Self::charset_for_designator(byte);
-            return;
-        }
-        if intermediates == *b"+" {
-            self.g3 = Self::charset_for_designator(byte);
+        if let Some(slot) = [*b"(", *b")", *b"*", *b"+"]
+            .iter()
+            .position(|i| intermediates == *i)
+        {
+            let charset = Self::charset_for_designator(byte);
+            match slot {
+                0 => self.g0 = charset,
+                1 => self.g1 = charset,
+                2 => self.g2 = charset,
+                _ => self.g3 = charset,
+            }
+            self.charsets_designated[slot] = true;
             return;
         }
         if !intermediates.is_empty() {

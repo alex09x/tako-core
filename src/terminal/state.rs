@@ -71,6 +71,9 @@ pub struct Terminal {
     pub(crate) g1: Charset,
     pub(crate) g2: Charset,
     pub(crate) g3: Charset,
+    /// G0..G3 a program designated since the last reset, even as ASCII:
+    /// `history` writes them back.
+    pub(crate) charsets_designated: [bool; 4],
     /// `true` once SO has shifted printing to `g1`; SI shifts back.
     pub(crate) shift_out: bool,
     /// GR slot selected via LS1R/LS2R/LS3R, tracked for parity.
@@ -224,6 +227,7 @@ impl Terminal {
             g1: Charset::Ascii,
             g2: Charset::Ascii,
             g3: Charset::Ascii,
+            charsets_designated: [false; 4],
             shift_out: false,
             gr_slot: 0,
             single_shift: None,

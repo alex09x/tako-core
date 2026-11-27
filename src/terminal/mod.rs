@@ -25,9 +25,12 @@ pub(crate) mod erase;
 pub(crate) mod events;
 pub(crate) mod graphics_scroll;
 pub(crate) mod graphics_viewport;
+pub(crate) mod history;
+mod history_style;
 pub(crate) mod osc99;
 pub(crate) mod perform;
 pub(crate) mod query;
+pub(crate) mod replay;
 pub(crate) mod reset;
 pub(crate) mod sanitize;
 pub(crate) mod screen;
@@ -52,6 +55,7 @@ pub use crate::tabstops::TabStops;
 pub use crate::title_stack::{self, TitleStack};
 pub use dump::TextTail;
 pub use events::{ContextFrame, ProgramStatusChangedEvent, TerminalEvent};
+pub use history::HistoryFormat;
 pub use program_status::{
     ProgramStatusBlockedKind, ProgramStatusDrainBatch, ProgramStatusMutation, ProgramStatusRecord,
     ProgramStatusRemovalReason, ProgramStatusSnapshot, ProgramStatusState, ProgramStatusUpdate,

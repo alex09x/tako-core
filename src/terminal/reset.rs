@@ -191,6 +191,7 @@ impl Terminal {
         self.scroll_right = self.active_grid().cols().saturating_sub(1);
         self.g0 = Charset::Ascii;
         self.g1 = Charset::Ascii;
+        self.charsets_designated = [false; 4];
         self.shift_out = false;
         self.pending_wrap = false;
         self.protected_mode = ProtectedMode::Off;
@@ -213,6 +214,7 @@ impl Terminal {
         self.selection = None;
         self.g0 = Charset::Ascii;
         self.g1 = Charset::Ascii;
+        self.charsets_designated = [false; 4];
         self.shift_out = false;
         self.tabstops = TabStops::new(cols);
         self.kitty_keyboard = KittyKeyboardState::new();

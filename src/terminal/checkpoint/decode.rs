@@ -184,6 +184,8 @@ pub fn import_traced_reserving(
         g1,
         g2,
         g3,
+        // Not in a checkpoint: only `history` output depends on it.
+        charsets_designated: [false; 4],
         shift_out,
         gr_slot,
         single_shift,

@@ -4,6 +4,8 @@
 # fixture and every snapshot taken from it.
 tests/fixtures/**/*.recording -text
 tests/fixtures/**/*.bin       -text
+# History as a session runtime prints it: CRLF is what it writes.
+tests/fixtures/history/*      -text
 
 # Unified diffs preserve upstream whitespace as data, including context lines.
 patches/zmx/*.patch whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab
