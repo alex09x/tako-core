@@ -219,6 +219,30 @@ fn palette_underline_colour_and_cluster_width_come_back() {
 }
 
 #[test]
+fn the_shell_screen_behind_a_full_screen_program_comes_back_when_it_exits() {
+    // A shell with history, then vim-like full screen; the client returns
+    // while it runs, and the program exits afterwards.
+    let mut bytes: Vec<u8> = (0..30)
+        .flat_map(|i| format!("\x1b[3{}mold {i}\x1b[0m\r\n", i % 8).into_bytes())
+        .collect();
+    bytes.extend_from_slice(b"$ vim notes\x1b[?1049h\x1b[2J\x1b[H~\r\n~\r\n\x1b[1;5Hediting");
+    let mut src = source(30, 6, &bytes);
+    let mut dst = replayed(&src);
+    assert_same(&src, &dst);
+    for t in [&mut src, &mut dst] {
+        t.feed(b"\x1b[?1049l\r\n$ ");
+    }
+    assert_same(&src, &dst);
+    let text = |t: &Terminal| String::from_utf8(t.history(HistoryFormat::Plain)).unwrap();
+    assert_eq!(text(&dst), text(&src));
+    assert!(
+        text(&dst).contains("old 0") && text(&dst).contains("$ vim notes"),
+        "{}",
+        text(&dst)
+    );
+}
+
+#[test]
 fn line_drawing_stays_on_after_a_replay() {
     // A program draws a border, and keeps drawing after the client returns.
     let src = source(20, 3, b"\x1b(0lqqk");

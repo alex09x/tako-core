@@ -16,7 +16,7 @@
 use super::{GraphemeWidthMethod, ScreenBuffer, Terminal};
 use crate::charset::Charset;
 use crate::cursor_style::CursorShape;
-use crate::grid::{Cell, CellAttrs, Color};
+use crate::grid::{Cell, CellAttrs, Color, Grid};
 use crate::modes::MouseTracking;
 
 type Style = (Color, Color, CellAttrs, u8, Color);
@@ -116,8 +116,14 @@ fn is_blank(cell: &Cell) -> bool {
 impl Terminal {
     /// One line of cells as styled text. `keep_trailing` keeps the blanks at
     /// the end (a soft-wrapped line needs its full width).
-    fn styled_cells(&self, cells: &[Cell], keep_trailing: bool, styled: bool, out: &mut Vec<u8>) {
-        let grid = self.active_grid();
+    /// `grid` is the screen the cells belong to (it holds their graphemes).
+    fn styled_cells(
+        grid: &Grid,
+        cells: &[Cell],
+        keep_trailing: bool,
+        styled: bool,
+        out: &mut Vec<u8>,
+    ) {
         let end = if keep_trailing {
             cells.len()
         } else {
@@ -155,8 +161,7 @@ impl Terminal {
 
     /// Scrollback lines, oldest first, soft-wrapped lines joined, each
     /// logical line ending in CRLF (LF for plain text).
-    fn scrollback_text(&self, styled: bool, out: &mut Vec<u8>) {
-        let grid = self.active_grid();
+    fn scrollback_text(grid: &Grid, styled: bool, out: &mut Vec<u8>) {
         let len = grid.scrollback_len();
         for i in (0..len).rev() {
             let Some(line) = grid.scrollback_line(i) else {
@@ -168,7 +173,7 @@ impl Terminal {
             } else {
                 grid.scrollback_line_wrapped(i - 1)
             };
-            self.styled_cells(line, continues, styled, out);
+            Self::styled_cells(grid, line, continues, styled, out);
             if !continues {
                 out.extend_from_slice(if styled { b"\r\n" } else { b"\n" });
             }
@@ -177,15 +182,16 @@ impl Terminal {
 
     /// The live screen (wherever the viewport is scrolled), rows joined
     /// unless soft-wrapped.
-    fn screen_text(&self, styled: bool, out: &mut Vec<u8>) {
-        let grid = self.active_grid();
+    /// `cursor_row` is where that screen's cursor is: the rows down to it are
+    /// written even when blank, so the cursor can be placed there.
+    fn screen_text(grid: &Grid, cursor_row: usize, styled: bool, out: &mut Vec<u8>) {
         let rows = grid.rows();
         let last = (0..rows)
             .rev()
             .find(|&r| grid.row_cells(r).iter().any(|c| !is_blank(c)))
             .unwrap_or(0)
             .max(if styled {
-                self.cursor.row.min(rows.saturating_sub(1))
+                cursor_row.min(rows.saturating_sub(1))
             } else {
                 0
             });
@@ -194,8 +200,48 @@ impl Terminal {
             if row > 0 && !grid.is_line_wrapped(row) {
                 out.extend_from_slice(if styled { b"\r\n" } else { b"\n" });
             }
-            self.styled_cells(grid.row_cells(row), next_continues, styled, out);
+            Self::styled_cells(grid, grid.row_cells(row), next_continues, styled, out);
         }
+    }
+
+    /// A screen's history then its rows, as a fresh destination screen
+    /// receives them: the newest history lines are scrolled off (a scroll
+    /// keeps them in scrollback on every terminal, an erase only on some),
+    /// then the rows are drawn from home.
+    fn screen_with_history(grid: &Grid, cursor_row: usize, out: &mut Vec<u8>) {
+        if grid.scrollback_len() > 0 {
+            Self::scrollback_text(grid, true, out);
+            // The last history line ends in CRLF, except when the screen's
+            // first row continues it: then one more line break is needed.
+            let breaks = grid.rows().saturating_sub(1) + usize::from(grid.is_line_wrapped(0));
+            out.extend_from_slice(&b"\r\n".repeat(breaks));
+            out.extend_from_slice(b"\x1b[H\x1b[0m");
+        }
+        Self::screen_text(grid, cursor_row, true, out);
+    }
+
+    /// While a full-screen program runs, the shell's screen behind it: its
+    /// history and rows, then the cursor and pen saved on entering the
+    /// alternate screen, so leaving it later (1049l) lands where it would
+    /// have. Entering with 1049h saves exactly that cursor again.
+    fn write_primary_behind_alternate(&self, out: &mut Vec<u8>) {
+        let saved = self.cursor.saved;
+        let (row, col) = saved.map_or((0, 0), |s| (s.row, s.col));
+        Self::screen_with_history(&self.primary, row, out);
+        let rows = self.primary.rows();
+        let cols = self.primary.cols();
+        out.extend_from_slice(
+            format!(
+                "\x1b[{};{}H",
+                row.min(rows.saturating_sub(1)) + 1,
+                col.min(cols.saturating_sub(1)) + 1
+            )
+            .as_bytes(),
+        );
+        if let Some(s) = saved {
+            sgr_into(out, (s.fg, s.bg, s.attrs, 0, Color::Default));
+        }
+        out.extend_from_slice(b"\x1b[?1049h\x1b[H\x1b[0m");
     }
 
     fn write_modes(&self, out: &mut Vec<u8>) {
@@ -403,22 +449,12 @@ impl Terminal {
                 b"\x1b[?2027l"
             });
         }
-        let alternate = self.active_screen() == ScreenBuffer::Alternate;
-        if alternate {
-            out.extend_from_slice(b"\x1b[?1049h");
-        } else if self.active_grid().scrollback_len() > 0 {
-            self.scrollback_text(true, &mut out);
-            // Scroll the newest history lines off the screen rather than
-            // erasing them: a scroll keeps them in the destination's
-            // scrollback on every terminal, an erase only on some.
-            // The last history line ends in CRLF, except when the screen's
-            // first row continues it: then one more line break is needed.
-            let grid = self.active_grid();
-            let breaks = grid.rows().saturating_sub(1) + usize::from(grid.is_line_wrapped(0));
-            out.extend_from_slice(&b"\r\n".repeat(breaks));
-            out.extend_from_slice(b"\x1b[H\x1b[0m");
+        if self.active_screen() == ScreenBuffer::Alternate {
+            self.write_primary_behind_alternate(&mut out);
+            Self::screen_text(&self.alternate, self.cursor.row, true, &mut out);
+        } else {
+            Self::screen_with_history(&self.primary, self.cursor.row, &mut out);
         }
-        self.screen_text(true, &mut out);
         self.write_modes(&mut out);
         self.write_cursor(&mut out);
         self.write_charsets(&mut out);
