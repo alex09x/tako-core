@@ -109,6 +109,26 @@ fn style_of(cell: &Cell) -> Style {
     )
 }
 
+/// The glyph to print again so a wrap is pending at (`row`, `col`), with its
+/// column: a wide glyph's lead when the cursor sits on its spacer.
+fn pending_wrap_cell(grid: &Grid, row: usize, col: usize) -> Option<(usize, &Cell)> {
+    let lead = match grid.get(row, col) {
+        Some(c) if c.is_wide_spacer && col > 0 => col - 1,
+        _ => col,
+    };
+    grid.get(row, lead)
+        .filter(|c| !c.is_wide_spacer)
+        .map(|c| (lead, c))
+}
+
+/// One cell again, in its own style, with its whole grapheme.
+fn reprint_cell(grid: &Grid, cell: &Cell, out: &mut Vec<u8>) {
+    sgr_into(out, style_of(cell));
+    let ch = if cell.char == '\0' { ' ' } else { cell.char };
+    out.extend_from_slice(ch.encode_utf8(&mut [0u8; 4]).as_bytes());
+    out.extend_from_slice(grid.grapheme(cell).as_bytes());
+}
+
 /// The final byte that designates `charset`; None for ASCII, the default.
 fn designator(charset: Charset) -> Option<u8> {
     match charset {
@@ -248,15 +268,16 @@ impl Terminal {
             saved.col.min(cols.saturating_sub(1)),
         );
         Self::screen_with_history(&self.primary, row, out);
-        out.extend_from_slice(format!("\x1b[{};{}H", row + 1, col + 1).as_bytes());
         // A pending wrap is part of what 1049l restores: reprinting the
-        // saved cell sets it again before the cursor is saved.
-        if saved.pending_wrap
-            && let Some(cell) = self.primary.get(row, col).filter(|c| !c.is_wide_spacer)
-        {
-            sgr_into(out, style_of(cell));
-            let ch = if cell.char == '\0' { ' ' } else { cell.char };
-            out.extend_from_slice(ch.encode_utf8(&mut [0u8; 4]).as_bytes());
+        // saved glyph sets it again before the cursor is saved.
+        let reprint = saved
+            .pending_wrap
+            .then(|| pending_wrap_cell(&self.primary, row, col))
+            .flatten();
+        let at = reprint.map_or(col, |(lead, _)| lead);
+        out.extend_from_slice(format!("\x1b[{};{}H", row + 1, at + 1).as_bytes());
+        if let Some((_, cell)) = reprint {
+            reprint_cell(&self.primary, cell, out);
         }
         sgr_into(out, (saved.fg, saved.bg, saved.attrs, 0, Color::Default));
         // The saved character sets too; the alternate screen's own are set
@@ -336,17 +357,11 @@ impl Terminal {
             self.cursor.col.min(cols.saturating_sub(1)),
         );
         let grid = self.active_grid();
-        // A wide glyph ending at the right edge leaves the cursor on its spacer.
-        let lead = match grid.get(row, col) {
-            Some(c) if c.is_wide_spacer && col > 0 => col - 1,
-            _ => col,
-        };
         let reprint = self
             .pending_wrap
-            .then(|| grid.get(row, lead))
-            .flatten()
-            .filter(|c| !c.is_wide_spacer);
-        let at = if reprint.is_some() { lead } else { col };
+            .then(|| pending_wrap_cell(grid, row, col))
+            .flatten();
+        let at = reprint.map_or(col, |(lead, _)| lead);
         if self.modes.origin_mode {
             // CUP counts from the margins now. A cursor outside them (DECRC
             // can put it there) lands where the destination clamps it.
@@ -367,13 +382,10 @@ impl Terminal {
         } else {
             out.extend_from_slice(format!("\x1b[{};{}H", row + 1, at + 1).as_bytes());
         }
-        if let Some(cell) = reprint {
+        if let Some((_, cell)) = reprint {
             // Reprinting the last glyph sets the pending wrap again; nothing
             // that moves the cursor may follow it.
-            out.extend_from_slice(&sgr(style_of(cell)));
-            let ch = if cell.char == '\0' { ' ' } else { cell.char };
-            out.extend_from_slice(ch.encode_utf8(&mut [0u8; 4]).as_bytes());
-            out.extend_from_slice(grid.grapheme(cell).as_bytes());
+            reprint_cell(grid, cell, out);
         }
         if !self.modes.autowrap {
             out.extend_from_slice(b"\x1b[?7l");

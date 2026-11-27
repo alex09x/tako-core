@@ -245,7 +245,12 @@ fn the_shell_screen_behind_a_full_screen_program_comes_back_when_it_exits() {
 #[test]
 fn leaving_the_alternate_screen_restores_what_entering_saved() {
     // (enter, leave, what the shell does after leaving)
-    let cases: [(&[u8], &[u8], &[u8]); 3] = [
+    let wide = "12345678漢\x1b[?1049h\x1b[Hframe".as_bytes();
+    let mark = "123456789e\u{301}\x1b[?1049h\x1b[Hframe".as_bytes();
+    let cases: [(&[u8], &[u8], &[u8]); 5] = [
+        // A wide glyph at the edge, and a cell with a combining mark.
+        (wide, b"\x1b[?1049l", b"X"),
+        (mark, b"\x1b[?1049l", b"X"),
         // Entered with 1047: nothing saved, the cursor stays where it is.
         (b"$ top\r\n\x1b[?1047h\x1b[Hframe", b"\x1b[?1047l", b"after"),
         // A wrap was pending at the right edge when the program started.
